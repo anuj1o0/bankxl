@@ -40,7 +40,7 @@ function BillingInner() {
     const switchTo = params.get('switch')
     if (switchTo && profile?.razorpay_subscription_id && profile.plan !== 'free') {
       setTimeout(() => {
-        if (confirm(`Switch to a new plan? Your current ${profile.plan} subscription will be cancelled immediately, and you'll pay for the new plan now. You'll lose any remaining days on your current cycle.`)) {
+        if (confirm(`Switch to a new plan? You'll be charged for the new plan now. Your current ${profile.plan} plan stays active until the new payment is confirmed — if you don't complete payment, nothing changes.`)) {
           switchPlan(switchTo)
         }
       }, 200)
@@ -103,7 +103,7 @@ function BillingInner() {
           window.location.href = `/dashboard?upgraded=true&plan=${planKey}`
         },
         onDismiss: () => {
-          toast.info('Payment dismissed', 'Your old subscription was cancelled. Re-subscribe from Pricing when ready.')
+          toast.info('Payment cancelled', 'No problem — your current plan is unchanged.')
           setLoading('')
           refresh()
         },
@@ -257,7 +257,7 @@ function BillingInner() {
             </h2>
             {isSubscribed && (
               <p style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 14, lineHeight: 1.6 }}>
-                Switching cancels your current subscription <strong>immediately</strong> and starts the new plan. You won't be billed twice, but you'll lose any remaining days on the current cycle.
+                Your current plan stays active until you complete the payment for the new one. If you dismiss the payment window, <strong>nothing changes</strong> — your current subscription continues normally. Once the new payment succeeds, the old subscription is cancelled automatically.
               </p>
             )}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
