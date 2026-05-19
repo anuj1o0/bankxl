@@ -78,6 +78,23 @@ export async function POST(req: NextRequest) {
 
     if ((sub.status === 'active' || sub.status === 'authenticated') &&
         (planTier === 'pro' || planTier === 'firm')) {
+
+      // If this subscription replaced an older one (plan switch), cancel
+      // the old subscription NOW — only after the new one is paid for.
+      const oldSubId = sub.notes?.old_subscription_id as string | undefined
+      if (oldSubId && oldSubId !== sub.id) {
+        try {
+          await razorpay.subscriptions.cancel(oldSubId, false)  // false = cancel immediately
+          console.log(`[verify] cancelled old subscription ${oldSubId} after successful switch`)
+        } catch (e: any) {
+          // If the old sub is already cancelled/completed, this fails — and that's fine
+          const msg = e?.error?.description || e?.message || ''
+          if (!/already|completed|cancel/i.test(msg)) {
+            console.error('[verify] could not cancel old sub:', msg)
+          }
+        }
+      }
+
       const update: Record<string, any> = {
         plan: planTier,
         plan_key: planKey || null,

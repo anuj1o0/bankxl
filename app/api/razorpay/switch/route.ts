@@ -5,12 +5,17 @@ import { createServerSupabase, createServiceSupabase } from '@/lib/supabase-serv
 export const runtime = 'nodejs'
 
 /**
- * Switch from one subscription plan to another.
- * Cancels the current subscription immediately and creates a new one.
- * The user pays for the new subscription via the returned checkout details.
+ * Switch to a different subscription plan SAFELY.
  *
- * NOTE: User loses any remaining days on their current cycle (no proration).
- * The frontend should make this clear before calling.
+ * IMPORTANT: This endpoint does NOT cancel the user's current subscription.
+ * Instead, it creates a NEW subscription with the old subscription ID stored
+ * in `notes.old_subscription_id`. The old subscription is cancelled ONLY
+ * after the new one is paid for and activated (handled by the verify endpoint
+ * and webhook).
+ *
+ * Why: if we cancelled the old sub upfront and the user dismissed the
+ * payment modal, they'd be left with no plan. Now if they dismiss, nothing
+ * changes — they keep their current plan.
  */
 export async function POST(req: NextRequest) {
   const supabase = createServerSupabase()
@@ -33,7 +38,7 @@ export async function POST(req: NextRequest) {
   const sb = createServiceSupabase()
   const { data: profile } = await sb
     .from('profiles')
-    .select('id, plan, razorpay_subscription_id')
+    .select('id, plan, plan_key, razorpay_subscription_id')
     .eq('id', user.id)
     .single()
 
@@ -46,31 +51,15 @@ export async function POST(req: NextRequest) {
       redirectTo: '/pricing',
     }, { status: 400 })
   }
-
-  // ─── Cancel current subscription immediately ─────────────────────
-  try {
-    await razorpay.subscriptions.cancel(profile.razorpay_subscription_id, false)
-  } catch (e: any) {
-    const msg = e?.error?.description || e?.message || ''
-    // If already cancelled in Razorpay (e.g. webhook delay), continue gracefully
-    if (!/already|completed|cancel/i.test(msg)) {
-      console.error('[switch] cancel failed:', msg)
-      return NextResponse.json({
-        error: 'Could not cancel current subscription. Please try again or email support.',
-      }, { status: 500 })
-    }
+  if (profile.plan_key === planKey) {
+    return NextResponse.json({
+      error: `You're already subscribed to ${target.name}.`,
+    }, { status: 400 })
   }
 
-  // Reset profile so they're temporarily on free until the new sub activates.
-  // The webhook will fully activate the new plan when payment succeeds.
-  await sb.from('profiles').update({
-    razorpay_subscription_id: null,
-    plan: 'free',
-    plan_key: null,
-    subscription_ends_at: new Date().toISOString(),
-  }).eq('id', user.id)
-
-  // ─── Create new subscription ──────────────────────────────────────
+  // Create new subscription — DON'T cancel the old one yet.
+  // The old subscription will only be cancelled after the new payment succeeds
+  // (in the verify endpoint and webhook handler).
   let subscription
   try {
     subscription = await razorpay.subscriptions.create({
@@ -82,20 +71,22 @@ export async function POST(req: NextRequest) {
         plan: target.plan,
         plan_key: planKey,
         email: user.email || '',
-        switched_from: profile.plan,
+        switched_from: profile.plan_key || profile.plan,
+        old_subscription_id: profile.razorpay_subscription_id,  // ← cancelled only after new sub activates
       },
     })
   } catch (e: any) {
     console.error('[switch] new subscription create failed:', e?.error?.description || e?.message)
     return NextResponse.json({
-      error: 'Old subscription cancelled, but could not create new one. Please re-subscribe from the Pricing page.',
-      redirectTo: '/pricing',
+      error: e?.error?.description || 'Could not create new subscription. Your current plan is unchanged.',
     }, { status: 500 })
   }
 
-  // We do NOT pre-populate razorpay_subscription_id. The webhook
-  // (subscription.activated) is the source of truth — until the user
-  // actually pays, they're correctly on free plan.
+  // DO NOT update the profile here. The user's current plan stays as-is.
+  // Only after the new sub is paid for and activated will:
+  //   1. The old sub be cancelled
+  //   2. The profile be updated to the new plan
+  // (Both handled by the verify endpoint and webhook.)
 
   return NextResponse.json({
     type: 'subscription',

@@ -42,7 +42,23 @@ export async function POST(req: NextRequest) {
         const userId = sub.notes?.user_id
         const planTier = sub.notes?.plan as string | undefined
         const planKey = sub.notes?.plan_key as string | undefined
+        const oldSubId = sub.notes?.old_subscription_id as string | undefined
+
         if (userId && (planTier === 'pro' || planTier === 'firm')) {
+          // If this is a plan switch, cancel the old sub now (only after new one paid)
+          if (oldSubId && oldSubId !== sub.id) {
+            try {
+              const { razorpay } = await import('@/lib/razorpay')
+              await razorpay.subscriptions.cancel(oldSubId, false)
+              console.log(`[razorpay/webhook] cancelled old subscription ${oldSubId} after switch`)
+            } catch (e: any) {
+              const msg = e?.error?.description || e?.message || ''
+              if (!/already|completed|cancel/i.test(msg)) {
+                console.error('[razorpay/webhook] could not cancel old sub:', msg)
+              }
+            }
+          }
+
           const update: Record<string, any> = {
             plan: planTier,
             plan_key: planKey || null,
