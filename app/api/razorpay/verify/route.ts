@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { razorpay, DAY_PASS_PAGES, TOPUP_PAGES } from '@/lib/razorpay'
 import { createServerSupabase, createServiceSupabase } from '@/lib/supabase-server'
 
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
     } catch (e: any) {
       console.error('[verify] auto-recover failed:', e?.error?.description || e?.message)
       return NextResponse.json({
-        error: 'Could not search Razorpay for your subscription. Please contact support@bankxl.in.',
+        error: 'Could not search Razorpay for your subscription. Please contact support@bankxlai.com.',
       }, { status: 500 })
     }
   }

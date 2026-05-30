@@ -1,4 +1,4 @@
-import Link from 'next/link'
+﻿import Link from 'next/link'
 import Nav from '@/components/Nav'
 import Footer from '@/components/Footer'
 
@@ -38,28 +38,28 @@ export default function Contact() {
             icon="📧"
             title="General support"
             desc="For questions, bugs, feature requests."
-            link="mailto:support@bankxl.in"
-            action="support@bankxl.in →"
+            link="mailto:support@bankxlai.com"
+            action="support@bankxlai.com →"
           />
           <Card
             icon="🔒"
             title="Privacy & data"
             desc="For GDPR/data deletion and privacy questions."
-            link="mailto:privacy@bankxl.in"
-            action="privacy@bankxl.in →"
+            link="mailto:privacy@bankxlai.com"
+            action="privacy@bankxlai.com →"
           />
           <Card
             icon="💼"
             title="Sales & enterprise"
             desc="For CA firms with 10+ users or volume pricing."
-            link="mailto:sales@bankxl.in"
-            action="sales@bankxl.in →"
+            link="mailto:sales@bankxlai.com"
+            action="sales@bankxlai.com →"
           />
           <Card
             icon="🐛"
             title="A bank format isn't working?"
             desc="Send us a sample (any redacted statement is fine). We tune it within 48 hours."
-            link="mailto:support@bankxl.in?subject=Bank%20format%20issue"
+            link="mailto:support@bankxlai.com?subject=Bank%20format%20issue"
             action="Email a sample →"
           />
         </div>

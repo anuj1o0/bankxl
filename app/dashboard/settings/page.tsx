@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import { useState, useEffect } from 'react'
 import { useDashboard } from '@/components/dashboard/DashboardContext'
 import TopBar from '@/components/dashboard/TopBar'
@@ -123,7 +123,7 @@ export default function SettingsPage() {
 
         <Section title="Danger zone">
           <p style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 14, lineHeight: 1.7 }}>
-            To delete your account and all associated data, email <a href="mailto:privacy@bankxl.in" style={{ color: 'var(--accent)' }}>privacy@bankxl.in</a>. We'll process within 7 days.
+            To delete your account and all associated data, email <a href="mailto:privacy@bankxlai.com" style={{ color: 'var(--accent)' }}>privacy@bankxlai.com</a>. We'll process within 7 days.
           </p>
         </Section>
       </div>

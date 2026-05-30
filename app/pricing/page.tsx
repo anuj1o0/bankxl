@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -93,7 +93,7 @@ const FAQ = [
   { q: 'What payment methods do you accept?', a: 'For India: UPI, all Indian credit/debit cards, netbanking, and wallets (PhonePe, Paytm, Amazon Pay) via Razorpay. For international users: all major credit/debit cards (Visa, Mastercard, Amex), Apple Pay, Google Pay, and more via Lemon Squeezy.' },
   { q: 'How does auto-renewal work?', a: 'For Pro/Firm subscriptions, your card is charged automatically each month/year. You can cancel anytime from your Billing page and keep access until the end of your billing period.' },
   { q: 'Can I switch plans?', a: 'Yes — go to Billing → "Switch to this" on any plan. Your current subscription stays active until your new payment is confirmed. If you dismiss the window, nothing changes.' },
-  { q: 'Do you generate invoices?', a: 'Yes. Indian users get GST-compliant invoices via Razorpay. International users get invoices via Lemon Squeezy. Email support@bankxl.in if you need a custom invoice.' },
+  { q: 'Do you generate invoices?', a: 'Yes. Indian users get GST-compliant invoices via Razorpay. International users get invoices via Lemon Squeezy. Email support@bankxlai.com if you need a custom invoice.' },
   { q: 'Refunds?', a: 'If our tool genuinely doesn\'t work for your statements, email us within 7 days for a full refund. See our refund policy.' },
 ]
 

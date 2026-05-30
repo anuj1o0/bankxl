@@ -2,9 +2,33 @@ import Link from 'next/link'
 import Nav from '@/components/Nav'
 import Footer from '@/components/Footer'
 
-export const metadata = {
-  title: 'Supported Banks — BankXL',
-  description: 'BankXL converts statements from 100+ banks including SBI, HDFC, ICICI, Axis, Kotak, PNB, Canara, BoB and many more.',
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Supported Banks — SBI, HDFC, ICICI, Axis, Kotak & 500+ More',
+  description: 'BankXL converts PDF statements from 500+ banks: SBI, HDFC, ICICI, Axis, Kotak, PNB, Canara, Bank of Baroda, IDFC First, IndusInd, Yes Bank, Federal, RBL, HSBC, Barclays & more.',
+  alternates: { canonical: '/banks' },
+  openGraph: {
+    title: 'Every Bank Supported — SBI, HDFC, ICICI, Axis & 500+ Banks',
+    description: 'Convert PDF bank statements from any Indian or international bank to Excel, CSV, or Tally XML in seconds.',
+    url: '/banks',
+  },
+}
+
+// Banks that have dedicated SEO landing pages with slug mapping
+const BANK_SLUGS: Record<string, string> = {
+  'State Bank of India': 'sbi',
+  'HDFC Bank': 'hdfc',
+  'ICICI Bank': 'icici',
+  'Axis Bank': 'axis',
+  'Kotak Mahindra Bank': 'kotak',
+  'Punjab National Bank': 'pnb',
+  'Canara Bank': 'canara',
+  'Bank of Baroda': 'bank-of-baroda',
+  'IDFC First Bank': 'idfc-first',
+  'IndusInd Bank': 'indusind',
+  'Yes Bank': 'yes-bank',
+  'Federal Bank': 'federal',
 }
 
 const PUBLIC_SECTOR = ['State Bank of India', 'Punjab National Bank', 'Bank of Baroda', 'Canara Bank', 'Union Bank of India', 'Indian Bank', 'Bank of India', 'Central Bank of India', 'Bank of Maharashtra', 'UCO Bank', 'IDBI Bank', 'Indian Overseas Bank', 'Punjab & Sind Bank']
@@ -18,12 +42,25 @@ const Section = ({ title, banks }: { title: string; banks: string[] }) => (
   <div style={{ marginBottom: 40 }}>
     <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16, letterSpacing: '-0.01em' }}>{title}</h2>
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 8 }}>
-      {banks.map(b => (
-        <div key={b} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>
-          {b}
-        </div>
-      ))}
+      {banks.map(b => {
+        const slug = BANK_SLUGS[b]
+        const inner = (
+          <>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>
+            {b}
+            {slug && <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--accent)', fontFamily: 'DM Mono, monospace' }}>guide →</span>}
+          </>
+        )
+        return slug ? (
+          <Link key={b} href={`/banks/${slug}`} style={{ background: 'var(--surface)', border: '1px solid var(--accent-border)', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
+            {inner}
+          </Link>
+        ) : (
+          <div key={b} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: 10 }}>
+            {inner}
+          </div>
+        )
+      })}
     </div>
   </div>
 )
@@ -38,7 +75,7 @@ export default function BanksPage() {
           Every bank. Every format.
         </h1>
         <p style={{ fontSize: 16, color: 'var(--text-dim)', marginBottom: 48, maxWidth: 640, lineHeight: 1.6 }}>
-          BankXL works with 100+ Indian and international banks. If your bank issues a PDF statement, we can convert it. Don't see your bank? Try it anyway — most unlisted banks work too.
+          BankXL works with 500+ Indian and international banks. Banks marked with a <span style={{ color: 'var(--accent)' }}>guide →</span> have a dedicated conversion guide. If your bank isn't listed, try it anyway — our AI handles most formats automatically.
         </p>
 
         <Section title="Public Sector Banks" banks={PUBLIC_SECTOR} />

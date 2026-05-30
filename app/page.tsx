@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
@@ -40,7 +40,7 @@ const FAQ = [
   { q: 'Can I cancel anytime?', a: 'Yes. Cancel from your dashboard with one click. You keep access until the end of your billing period. No questions asked.' },
   { q: 'Do you offer a free trial?', a: 'Yes. The free plan gives you 50 pages every month, no credit card needed. If you need a one-off, grab a ₹49 day pass for 100 pages in 24 hours.' },
   { q: 'Does it work on password-protected PDFs?', a: 'Remove the password first using any free PDF unlocker (or Adobe Acrobat). Once unlocked, BankXL handles the rest.' },
-  { q: 'Can I get a custom invoice for tax purposes?', a: 'Yes. Indian users get GST-compliant invoices via Razorpay. International users get receipts via Lemon Squeezy. Email support@bankxl.in if you need anything custom.' },
+  { q: 'Can I get a custom invoice for tax purposes?', a: 'Yes. Indian users get GST-compliant invoices via Razorpay. International users get receipts via Lemon Squeezy. Email support@bankxlai.com if you need anything custom.' },
 ]
 
 const COMPARISON = [
@@ -53,6 +53,29 @@ const COMPARISON = [
   { feat: 'Pay only for pages used', us: true, others: false },
 ]
 
+const faqLD = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: FAQ.map(f => ({
+    '@type': 'Question',
+    name: f.q,
+    acceptedAnswer: { '@type': 'Answer', text: f.a },
+  })),
+}
+
+const howToLD = {
+  '@context': 'https://schema.org',
+  '@type': 'HowTo',
+  name: 'How to convert a bank statement PDF to Excel',
+  description: 'Convert any bank statement PDF to a formatted Excel file in 3 easy steps using BankXL.',
+  totalTime: 'PT1M',
+  step: [
+    { '@type': 'HowToStep', position: 1, name: 'Upload PDF', text: 'Drop your bank statement PDF — even password-protected ones (after unlock).' },
+    { '@type': 'HowToStep', position: 2, name: 'AI extracts data', text: 'BankXL AI reads every transaction, amount, date and balance in seconds.' },
+    { '@type': 'HowToStep', position: 3, name: 'Download Excel', text: 'Download clean Excel, CSV, JSON or Tally XML — formatted and ready to use.' },
+  ],
+}
+
 export default function LandingPage() {
   const [user, setUser] = useState<any>(null)
   const [openFaq, setOpenFaq] = useState<number | null>(null)
@@ -64,6 +87,8 @@ export default function LandingPage() {
 
   return (
     <div className="grid-bg" style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLD) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(howToLD) }} />
       <div className="glow-blob" style={{ top: -200, right: -100 }} />
       <Nav />
 

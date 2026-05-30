@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
@@ -151,7 +151,7 @@ function BillingInner() {
         toast.success('Subscription cancelled', data.message || 'Access continues until end of current period.')
         refresh()
       } else {
-        toast.error('Cancel failed', data.error || 'Email support@bankxl.in')
+        toast.error('Cancel failed', data.error || 'Email support@bankxlai.com')
       }
     } catch {
       toast.error('Network error', 'Try again.')
@@ -314,7 +314,7 @@ function BillingInner() {
                 </a>.
               </p>
               <p style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.7 }}>
-                Need a custom invoice? Email <a href="mailto:support@bankxl.in" style={{ color: 'var(--accent)', textDecoration: 'none' }}>support@bankxl.in</a> with your payment reference and business details.
+                Need a custom invoice? Email <a href="mailto:support@bankxlai.com" style={{ color: 'var(--accent)', textDecoration: 'none' }}>support@bankxlai.com</a> with your payment reference and business details.
               </p>
             </>
           ) : (
@@ -323,14 +323,14 @@ function BillingInner() {
                 Razorpay automatically emails a GST-compliant invoice for every payment. Check your inbox after each charge — these are your tax-ready receipts.
               </p>
               <p style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.7 }}>
-                Need a custom invoice with your business name, PAN, or GSTIN? Email <a href="mailto:support@bankxl.in" style={{ color: 'var(--accent)', textDecoration: 'none' }}>support@bankxl.in</a> with your payment reference.
+                Need a custom invoice with your business name, PAN, or GSTIN? Email <a href="mailto:support@bankxlai.com" style={{ color: 'var(--accent)', textDecoration: 'none' }}>support@bankxlai.com</a> with your payment reference.
               </p>
             </>
           )}
         </div>
 
         <div style={{ marginTop: 22, fontSize: 13, color: 'var(--text-muted)', textAlign: 'center' }}>
-          Questions about billing? Email <a href="mailto:support@bankxl.in" style={{ color: 'var(--accent)', textDecoration: 'none' }}>support@bankxl.in</a> · See <Link href="/refund" style={{ color: 'var(--accent)', textDecoration: 'none' }}>refund policy</Link>
+          Questions about billing? Email <a href="mailto:support@bankxlai.com" style={{ color: 'var(--accent)', textDecoration: 'none' }}>support@bankxlai.com</a> · See <Link href="/refund" style={{ color: 'var(--accent)', textDecoration: 'none' }}>refund policy</Link>
         </div>
       </div>
     </>

@@ -163,6 +163,6 @@ Aim: first 10 paying users in 30 days.
 
 ## Support
 
-- support@bankxl.in (general)
-- privacy@bankxl.in (data/GDPR)
-- sales@bankxl.in (enterprise)
+- support@bankxlai.com (general)
+- privacy@bankxlai.com (data/GDPR)
+- sales@bankxlai.com (enterprise)
