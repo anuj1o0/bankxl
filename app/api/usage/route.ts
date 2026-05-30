@@ -16,7 +16,7 @@ export async function GET() {
   }
 
   const [profileRes, conversionsRes, dayPassRes, teamMembershipRes] = await Promise.all([
-    sb.from('profiles').select('id, plan, plan_key, bonus_pages, conversions_this_month, conversions_reset_at, api_key, full_name, email, razorpay_customer_id, razorpay_subscription_id, subscription_ends_at, payment_failed_at, brand_name, default_format, email_notifications').eq('id', user.id).single(),
+    sb.from('profiles').select('id, plan, plan_key, bonus_pages, conversions_this_month, conversions_reset_at, api_key, full_name, email, razorpay_customer_id, razorpay_subscription_id, subscription_ends_at, payment_failed_at, brand_name, default_format, email_notifications, payment_provider, ls_subscription_id, ls_customer_id').eq('id', user.id).single(),
     sb.from('conversions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(50),
     sb.from('day_passes').select('*').eq('user_id', user.id).gte('expires_at', new Date().toISOString()).order('expires_at', { ascending: false }).limit(1).maybeSingle(),
     sb.from('team_members').select('owner_id, status').eq('member_id', user.id).eq('status', 'active').maybeSingle(),

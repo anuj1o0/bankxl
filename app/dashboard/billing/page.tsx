@@ -142,7 +142,10 @@ function BillingInner() {
     if (!confirm('Cancel your subscription? You\'ll keep access until the end of your current billing period.')) return
     setLoading('cancel')
     try {
-      const res = await fetch('/api/razorpay/cancel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ immediate: false }) })
+      // Route to the correct cancel endpoint based on payment provider
+      const endpoint = isLSUser ? '/api/lemonsqueezy/cancel' : '/api/razorpay/cancel'
+      const body = isLSUser ? {} : { immediate: false }
+      const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       const data = await res.json()
       if (res.ok) {
         toast.success('Subscription cancelled', data.message || 'Access continues until end of current period.')
@@ -159,8 +162,10 @@ function BillingInner() {
 
   const planLabel = PLAN_LABELS[profile?.plan as keyof typeof PLAN_LABELS] || 'Free'
   const currentPlanKey = profile?.plan_key
-  // Only consider truly subscribed if BOTH the sub_id exists AND the plan is actually paid
-  const isSubscribed = !!profile?.razorpay_subscription_id && (profile.plan === 'pro' || profile.plan === 'firm')
+  const paymentProvider = profile?.payment_provider || null
+  // Truly subscribed = has a sub ID (either provider) AND plan is paid
+  const isSubscribed = !!(profile?.razorpay_subscription_id || profile?.ls_subscription_id) && (profile?.plan === 'pro' || profile?.plan === 'firm')
+  const isLSUser = paymentProvider === 'lemonsqueezy'
 
   // Filter available plans: hide the EXACT plan the user is currently on (by plan_key)
   const availablePlans = ALL_PLANS.filter(p => {
@@ -209,14 +214,26 @@ function BillingInner() {
                   </button>
                   <button onClick={syncWithRazorpay} disabled={!!loading} title="If you paid but plan didn't update"
                     style={{ padding: '11px 16px', background: 'var(--surface-2)', color: 'var(--text-dim)', border: '1px solid var(--border-strong)', borderRadius: 9, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'Sora,sans-serif' }}>
-                    {loading === 'sync' ? 'Syncing...' : '↻ Sync with Razorpay'}
+                    {loading === 'sync' ? 'Syncing...' : '↻ Sync plan'}
                   </button>
                 </>
               ) : isSubscribed ? (
-                <button onClick={cancel} disabled={!!loading}
-                  style={{ padding: '11px 20px', background: 'var(--surface-2)', color: 'var(--text)', border: '1px solid var(--border-strong)', borderRadius: 9, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'Sora,sans-serif' }}>
-                  {loading === 'cancel' ? 'Cancelling...' : 'Cancel subscription'}
-                </button>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                  {isLSUser && (
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', padding: '6px 12px', background: 'var(--surface-2)', borderRadius: 8, border: '1px solid var(--border)' }}>
+                      🌍 via Lemon Squeezy
+                    </div>
+                  )}
+                  {!isLSUser && (
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', padding: '6px 12px', background: 'var(--surface-2)', borderRadius: 8, border: '1px solid var(--border)' }}>
+                      🇮🇳 via Razorpay
+                    </div>
+                  )}
+                  <button onClick={cancel} disabled={!!loading}
+                    style={{ padding: '11px 20px', background: 'var(--surface-2)', color: 'var(--text)', border: '1px solid var(--border-strong)', borderRadius: 9, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'Sora,sans-serif' }}>
+                    {loading === 'cancel' ? 'Cancelling...' : 'Cancel subscription'}
+                  </button>
+                </div>
               ) : null}
             </div>
           </div>
@@ -255,7 +272,12 @@ function BillingInner() {
             <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 6 }}>
               {isSubscribed ? 'Switch plan' : 'Available plans'}
             </h2>
-            {isSubscribed && (
+            {isSubscribed && isLSUser && (
+              <div style={{ padding: '12px 16px', background: 'var(--info-bg)', border: '1px solid var(--info-border)', borderRadius: 10, fontSize: 13, color: 'var(--text-dim)', marginBottom: 14, lineHeight: 1.6 }}>
+                ℹ️ Plan switching for international (Lemon Squeezy) subscriptions isn't supported in-app yet. To switch, cancel your current plan and re-subscribe to the new one from the <Link href="/pricing" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Pricing page</Link>. You won't lose access — cancellation is at end-of-period.
+              </div>
+            )}
+            {isSubscribed && !isLSUser && (
               <p style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 14, lineHeight: 1.6 }}>
                 Your current plan stays active until you complete the payment for the new one. If you dismiss the payment window, <strong>nothing changes</strong> — your current subscription continues normally. Once the new payment succeeds, the old subscription is cancelled automatically.
               </p>
@@ -269,9 +291,9 @@ function BillingInner() {
                   <div className="mono" style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>{p.period} · ≈ {p.priceUsd}</div>
                   <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 14 }}>{p.conv}</div>
                   <button
-                    onClick={() => isSubscribed ? switchPlan(p.key) : subscribe(p.key)}
-                    disabled={!!loading}
-                    style={{ width: '100%', padding: 9, background: p.best ? 'var(--accent)' : 'var(--surface-2)', color: p.best ? 'var(--on-accent)' : 'var(--text)', border: p.best ? 'none' : '1px solid var(--border-strong)', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: loading ? 'wait' : 'pointer', fontFamily: 'Sora,sans-serif' }}>
+                    onClick={() => isSubscribed && !isLSUser ? switchPlan(p.key) : !isSubscribed ? subscribe(p.key) : undefined}
+                    disabled={!!loading || (isSubscribed && isLSUser)}
+                    style={{ width: '100%', padding: 9, background: p.best ? 'var(--accent)' : 'var(--surface-2)', color: p.best ? 'var(--on-accent)' : 'var(--text)', border: p.best ? 'none' : '1px solid var(--border-strong)', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: (loading || (isSubscribed && isLSUser)) ? 'not-allowed' : 'pointer', fontFamily: 'Sora,sans-serif', opacity: isSubscribed && isLSUser ? 0.4 : 1 }}>
                     {loading === p.key ? 'Loading...' : isSubscribed ? 'Switch to this' : 'Choose'}
                   </button>
                 </div>
@@ -283,12 +305,28 @@ function BillingInner() {
         {/* Invoices */}
         <div style={{ background: 'var(--zebra)', border: '1px solid var(--border)', borderRadius: 12, padding: 24 }}>
           <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>Invoices & receipts</h2>
-          <p style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.7, marginBottom: 12 }}>
-            Razorpay automatically emails a GST-compliant invoice for every payment. Check your inbox after each charge — these are your tax-ready receipts.
-          </p>
-          <p style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.7 }}>
-            Need a custom invoice with your business name, PAN, or GSTIN? Email <a href="mailto:support@bankxl.in" style={{ color: 'var(--accent)', textDecoration: 'none' }}>support@bankxl.in</a> with your payment reference.
-          </p>
+          {isLSUser ? (
+            <>
+              <p style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.7, marginBottom: 12 }}>
+                Lemon Squeezy automatically emails a receipt for every payment. Check your inbox after each charge. You can also view all your invoices at{' '}
+                <a href="https://app.lemonsqueezy.com/my-orders" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none' }}>
+                  app.lemonsqueezy.com/my-orders
+                </a>.
+              </p>
+              <p style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.7 }}>
+                Need a custom invoice? Email <a href="mailto:support@bankxl.in" style={{ color: 'var(--accent)', textDecoration: 'none' }}>support@bankxl.in</a> with your payment reference and business details.
+              </p>
+            </>
+          ) : (
+            <>
+              <p style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.7, marginBottom: 12 }}>
+                Razorpay automatically emails a GST-compliant invoice for every payment. Check your inbox after each charge — these are your tax-ready receipts.
+              </p>
+              <p style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.7 }}>
+                Need a custom invoice with your business name, PAN, or GSTIN? Email <a href="mailto:support@bankxl.in" style={{ color: 'var(--accent)', textDecoration: 'none' }}>support@bankxl.in</a> with your payment reference.
+              </p>
+            </>
+          )}
         </div>
 
         <div style={{ marginTop: 22, fontSize: 13, color: 'var(--text-muted)', textAlign: 'center' }}>
