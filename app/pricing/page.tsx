@@ -9,22 +9,24 @@ import Footer from '@/components/Footer'
 
 interface UserPlanState {
   plan: 'free' | 'pro' | 'firm'
-  planKey: string | null     // 'pro_monthly' | 'pro_annual' | 'firm_monthly' | 'firm_annual'
+  planKey: string | null
   hasActiveSubscription: boolean
+  paymentProvider: 'razorpay' | 'lemonsqueezy' | null
 }
 
 type Cycle = 'monthly' | 'annual'
 
-const TIERS = (cycle: Cycle) => ([
+// ─── Tier definitions (currency-agnostic) ───────────────────────────────────
+const TIERS = (cycle: Cycle, isIndia: boolean) => ([
   {
     key: 'free',
     name: 'Free',
-    price: 0,
-    priceUsd: 0,
+    price: '0',
+    symbol: '',
     period: 'forever',
     pages: '50 pages / month',
     desc: 'Try BankXL with no commitment.',
-    features: ['50 pages every month', 'Excel format', 'All Indian banks', 'Basic support'],
+    features: ['50 pages every month', 'Excel format', 'All Indian & global banks', 'Basic support'],
     cta: 'Start free',
     href: '/login?signup=true',
     planKey: null,
@@ -33,11 +35,15 @@ const TIERS = (cycle: Cycle) => ([
   {
     key: 'pro',
     name: 'Pro',
-    price: cycle === 'monthly' ? 499 : 4999,
-    priceUsd: cycle === 'monthly' ? 8 : 80,
+    price: isIndia
+      ? (cycle === 'monthly' ? '499' : '4,999')
+      : (cycle === 'monthly' ? '8' : '80'),
+    symbol: isIndia ? '₹' : '$',
     period: cycle === 'monthly' ? 'month' : 'year',
     pages: '800 pages / month',
-    sub: cycle === 'annual' ? 'Equiv. ₹417/mo · save 17%' : undefined,
+    sub: cycle === 'annual'
+      ? (isIndia ? 'Equiv. ₹417/mo · save 17%' : 'Equiv. $6.67/mo · save 17%')
+      : undefined,
     desc: 'For active accountants and bookkeepers.',
     features: [
       '800 pages / month',
@@ -46,7 +52,7 @@ const TIERS = (cycle: Cycle) => ([
       'Conversion history (90 days)',
       'Re-download in any format',
       'Priority processing',
-      'Top-up: ₹100 for 60 extra pages',
+      isIndia ? 'Top-up: ₹100 for 60 extra pages' : 'Top-up: $1.20 for 60 extra pages',
     ],
     cta: 'Get Pro',
     planKey: cycle === 'monthly' ? 'pro_monthly' : 'pro_annual',
@@ -56,11 +62,15 @@ const TIERS = (cycle: Cycle) => ([
   {
     key: 'firm',
     name: 'Firm',
-    price: cycle === 'monthly' ? 4999 : 49999,
-    priceUsd: cycle === 'monthly' ? 50 : 500,
+    price: isIndia
+      ? (cycle === 'monthly' ? '4,999' : '49,999')
+      : (cycle === 'monthly' ? '59' : '590'),
+    symbol: isIndia ? '₹' : '$',
     period: cycle === 'monthly' ? 'month' : 'year',
     pages: '8,000 pages / month',
-    sub: cycle === 'annual' ? 'Equiv. ₹4,167/mo · save 17%' : undefined,
+    sub: cycle === 'annual'
+      ? (isIndia ? 'Equiv. ₹4,167/mo · save 17%' : 'Equiv. $49/mo · save 17%')
+      : undefined,
     desc: 'For CA firms and finance teams.',
     features: [
       '8,000 pages / month',
@@ -79,11 +89,11 @@ const TIERS = (cycle: Cycle) => ([
 const FAQ = [
   { q: 'Why pages instead of conversions?', a: 'A 1-page statement and a 50-page statement use very different amounts of compute. Charging per page is the fairest way — you pay for what you actually consume. Most CAs find 50 free pages enough to handle 5–10 small statements every month.' },
   { q: 'How many pages does a typical statement have?', a: 'Most monthly statements are 3–8 pages. Quarterly is 8–20. Yearly is 25–60. So Pro\'s 800 pages handles roughly 100 small statements per month, and Firm\'s 8,000 pages handles 1,000+.' },
-  { q: 'What if I run out of pages mid-month?', a: 'Buy a top-up: ₹100 (~$1) for 60 extra pages. They\'re added to your current month\'s allowance instantly. Top-ups expire on the 1st of next month along with your regular allowance — they don\'t carry over.' },
-  { q: 'What payment methods do you accept?', a: 'UPI, all Indian credit/debit cards, netbanking, and select wallets (PhonePe, Paytm, Amazon Pay) via Razorpay. International Visa/Mastercard/Amex also work.' },
-  { q: 'How does auto-renewal work?', a: 'For Pro/Firm subscriptions, Razorpay sets up a UPI AutoPay or card eMandate during checkout. You\'re charged automatically each month/year. You can cancel anytime from Billing.' },
-  { q: 'Can I switch plans?', a: 'Yes — go to Billing → "Switch to this" on any other plan. Your current subscription is cancelled immediately and the new one starts (you lose remaining days but no double-bill).' },
-  { q: 'Do you generate GST invoices?', a: 'Yes. Razorpay issues GST-compliant invoices for every payment. Email support@bankxl.in if you need a custom invoice with your business name.' },
+  { q: 'What if I run out of pages mid-month?', a: 'Buy a top-up: ₹100 (~$1.20) for 60 extra pages. They\'re added to your current month\'s allowance instantly. Top-ups expire on the 1st of next month along with your regular allowance — they don\'t carry over.' },
+  { q: 'What payment methods do you accept?', a: 'For India: UPI, all Indian credit/debit cards, netbanking, and wallets (PhonePe, Paytm, Amazon Pay) via Razorpay. For international users: all major credit/debit cards (Visa, Mastercard, Amex), Apple Pay, Google Pay, and more via Lemon Squeezy.' },
+  { q: 'How does auto-renewal work?', a: 'For Pro/Firm subscriptions, your card is charged automatically each month/year. You can cancel anytime from your Billing page and keep access until the end of your billing period.' },
+  { q: 'Can I switch plans?', a: 'Yes — go to Billing → "Switch to this" on any plan. Your current subscription stays active until your new payment is confirmed. If you dismiss the window, nothing changes.' },
+  { q: 'Do you generate invoices?', a: 'Yes. Indian users get GST-compliant invoices via Razorpay. International users get invoices via Lemon Squeezy. Email support@bankxl.in if you need a custom invoice.' },
   { q: 'Refunds?', a: 'If our tool genuinely doesn\'t work for your statements, email us within 7 days for a full refund. See our refund policy.' },
 ]
 
@@ -93,16 +103,18 @@ export default function PricingPage() {
   const [userPlan, setUserPlan] = useState<UserPlanState | null>(null)
   const [loading, setLoading] = useState('')
   const [openFaq, setOpenFaq] = useState<number | null>(null)
+  // Country detection — default India so there's no layout flash for most users
+  const [isIndia, setIsIndia] = useState(true)
+  const [geoLoading, setGeoLoading] = useState(true)
   const router = useRouter()
-  const tiers = TIERS(cycle)
   const { openCheckout, verifyPayment } = useRazorpay()
 
+  // Load user session + plan
   useEffect(() => {
     const sb = createClient()
     sb.auth.getUser().then(async ({ data }) => {
       setUser(data.user)
       if (data.user) {
-        // Fetch the user's current plan to render smart CTAs
         try {
           const res = await fetch('/api/usage', { cache: 'no-store' })
           if (res.ok) {
@@ -110,7 +122,8 @@ export default function PricingPage() {
             setUserPlan({
               plan: u.profile?.plan || 'free',
               planKey: u.profile?.plan_key || null,
-              hasActiveSubscription: !!u.profile?.razorpay_subscription_id,
+              hasActiveSubscription: !!(u.profile?.razorpay_subscription_id || u.profile?.ls_subscription_id),
+              paymentProvider: u.profile?.payment_provider || null,
             })
           }
         } catch {}
@@ -118,11 +131,22 @@ export default function PricingPage() {
     })
   }, [])
 
-  const startCheckout = async (planKey: string | null) => {
-    if (!planKey) return
-    if (!user) { router.push(`/login?redirect=/pricing&plan=${planKey}`); return }
-    setLoading(planKey)
+  // Detect country (non-blocking — page renders instantly with India defaults)
+  useEffect(() => {
+    fetch('/api/geo')
+      .then(r => r.json())
+      .then(({ country }) => {
+        setIsIndia(country === 'IN')
+      })
+      .catch(() => { /* keep India default */ })
+      .finally(() => setGeoLoading(false))
+  }, [])
 
+  const tiers = TIERS(cycle, isIndia)
+
+  // ─── Razorpay checkout (India) ─────────────────────────────────────────────
+  const startRazorpayCheckout = async (planKey: string) => {
+    setLoading(planKey)
     let data: CheckoutResponse
     try {
       const res = await fetch('/api/razorpay/subscribe', {
@@ -145,24 +169,48 @@ export default function PricingPage() {
     try {
       await openCheckout(data, {
         onSuccess: async (success) => {
-          // Verify with backend so plan/topup/day-pass updates immediately
-          // (independent of webhook delivery)
-          try {
-            await verifyPayment(success)
-          } catch (e) {
-            console.warn('[checkout] verify failed:', e)
-          }
-          window.location.href = `/dashboard?upgraded=true&plan=${planKey}`
+          try { await verifyPayment(success) } catch (e) { console.warn('[checkout] verify:', e) }
+          window.location.href = `/dashboard?upgraded=true&plan=${planKey}&provider=razorpay`
         },
         onDismiss: () => setLoading(''),
-        onFailure: (err) => {
-          alert('Payment failed: ' + err)
-          setLoading('')
-        },
+        onFailure: (err) => { alert('Payment failed: ' + err); setLoading('') },
       })
     } catch (e: any) {
       alert(e.message || 'Could not open payment. Please try again.')
       setLoading('')
+    }
+  }
+
+  // ─── Lemon Squeezy checkout (International) ───────────────────────────────
+  const startLSCheckout = async (planKey: string) => {
+    setLoading(planKey)
+    try {
+      const res = await fetch('/api/lemonsqueezy/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: planKey }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        alert(data.error || 'Could not start checkout. Please try again.')
+        setLoading('')
+        return
+      }
+      // Redirect to Lemon Squeezy hosted checkout
+      window.location.href = data.url
+    } catch {
+      alert('Network error. Check your connection and try again.')
+      setLoading('')
+    }
+  }
+
+  const startCheckout = async (planKey: string | null) => {
+    if (!planKey) return
+    if (!user) { router.push(`/login?redirect=/pricing&plan=${planKey}`); return }
+    if (isIndia) {
+      await startRazorpayCheckout(planKey)
+    } else {
+      await startLSCheckout(planKey)
     }
   }
 
@@ -187,10 +235,26 @@ export default function PricingPage() {
         <h1 style={{ fontSize: 'clamp(34px, 4vw, 48px)', fontWeight: 600, letterSpacing: '-0.03em', marginBottom: 14 }}>
           Pay only for what you use.
         </h1>
-        <p style={{ fontSize: 17, color: 'var(--text-dim)', marginBottom: 32, lineHeight: 1.6 }}>
-          Page-based pricing. Pay via UPI, card, or netbanking. No hidden fees.
+        <p style={{ fontSize: 17, color: 'var(--text-dim)', marginBottom: 16, lineHeight: 1.6 }}>
+          Page-based pricing. No hidden fees.
         </p>
 
+        {/* Payment method badge */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 24 }}>
+          {geoLoading ? (
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace' }}>Detecting your region…</div>
+          ) : (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 20, padding: '5px 14px', fontSize: 12, color: 'var(--text-dim)' }}>
+              {isIndia ? (
+                <>🇮🇳 India — Pay via <strong>Razorpay</strong> (UPI, Card, NetBanking) · <button onClick={() => setIsIndia(false)} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: 12, padding: 0, fontFamily: 'inherit' }}>Switch to $ USD</button></>
+              ) : (
+                <>🌍 International — Pay via <strong>Lemon Squeezy</strong> (Card, PayPal, Apple/Google Pay) · <button onClick={() => setIsIndia(true)} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: 12, padding: 0, fontFamily: 'inherit' }}>Switch to ₹ INR</button></>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Billing cycle toggle */}
         <div style={{ display: 'inline-flex', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 4 }}>
           <button onClick={() => setCycle('monthly')} style={{
             padding: '8px 18px', fontSize: 13, fontWeight: 500, border: 'none', borderRadius: 8, cursor: 'pointer',
@@ -223,17 +287,14 @@ export default function PricingPage() {
                 <div className="mono" style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6, letterSpacing: 2 }}>{t.name.toUpperCase()}</div>
                 <div style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 16 }}>{t.desc}</div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                  {t.price === 0 ? <span style={{ fontSize: 42, fontWeight: 600 }}>Free</span> : (
+                  {t.price === '0' ? <span style={{ fontSize: 42, fontWeight: 600 }}>Free</span> : (
                     <>
-                      <span style={{ fontSize: 16, color: 'var(--text-muted)', alignSelf: 'flex-start', marginTop: 12 }}>₹</span>
-                      <span style={{ fontSize: 42, fontWeight: 600, letterSpacing: '-0.02em' }}>{t.price.toLocaleString('en-IN')}</span>
+                      <span style={{ fontSize: 16, color: 'var(--text-muted)', alignSelf: 'flex-start', marginTop: 12 }}>{t.symbol}</span>
+                      <span style={{ fontSize: 42, fontWeight: 600, letterSpacing: '-0.02em' }}>{t.price}</span>
                       <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>/{t.period}</span>
                     </>
                   )}
                 </div>
-                {t.price !== 0 && t.priceUsd && (
-                  <div className="mono" style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>≈ ${t.priceUsd}/{t.period}</div>
-                )}
                 <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--accent)', marginTop: 6 }}>{t.pages}</div>
                 {t.sub && <div style={{ fontSize: 12, color: 'var(--accent)', marginTop: 4, fontFamily: 'DM Mono, monospace' }}>{t.sub}</div>}
               </div>
@@ -249,9 +310,7 @@ export default function PricingPage() {
                 const isFree = !t.planKey
                 const currentPlan = userPlan?.plan
                 const currentPlanKey = userPlan?.planKey
-                // Compare by exact plan_key (e.g. 'pro_monthly' vs 'pro_annual'), not just tier
                 const isCurrentPlan = !isFree && currentPlanKey === t.planKey
-                // Only "switch in billing" if user actually has an active paid plan
                 const userHasSub = !!userPlan?.hasActiveSubscription && (currentPlan === 'pro' || currentPlan === 'firm')
                 const showSwitch = !isFree && userHasSub && !isCurrentPlan
 
@@ -294,8 +353,11 @@ export default function PricingPage() {
                       borderRadius: 10, fontSize: 14, fontWeight: 600, fontFamily: 'Sora,sans-serif',
                       border: t.highlight ? 'none' : '1px solid var(--border-strong)',
                       cursor: loading ? 'wait' : 'pointer', opacity: loading && loading !== t.planKey ? 0.5 : 1,
+                      width: '100%',
                     }}>
-                    {loading === t.planKey ? 'Opening checkout...' : t.cta + ' →'}
+                    {loading === t.planKey
+                      ? (isIndia ? 'Opening Razorpay...' : 'Opening checkout...')
+                      : t.cta + ' →'}
                   </button>
                 )
               })()}
@@ -304,8 +366,8 @@ export default function PricingPage() {
         </div>
       </div>
 
+      {/* Day Pass + Top-up */}
       <div style={{ maxWidth: 720, margin: '0 auto', padding: '0 24px 24px', display: 'grid', gap: 14 }}>
-        {/* Day Pass — hidden for Firm users (already unlimited-ish) */}
         {userPlan?.plan !== 'firm' && (
           <div style={{ background: 'linear-gradient(135deg, var(--surface), var(--surface-2))', border: '1px solid var(--accent-border)', borderRadius: 16, padding: 22, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap' }}>
             <div>
@@ -314,7 +376,11 @@ export default function PricingPage() {
                 <span style={{ fontSize: 16, fontWeight: 600 }}>Just need a one-off conversion?</span>
               </div>
               <div style={{ fontSize: 13, color: 'var(--text-dim)' }}>
-                Day Pass: <strong style={{ color: 'var(--accent)' }}>₹49 (≈$1)</strong> for 100 pages within 24 hours. No subscription.
+                Day Pass:{' '}
+                <strong style={{ color: 'var(--accent)' }}>
+                  {isIndia ? '₹49' : '$0.99'}
+                </strong>{' '}
+                for 100 pages within 24 hours. No subscription.
               </div>
             </div>
             <button onClick={dayPass} disabled={!!loading}
@@ -324,18 +390,24 @@ export default function PricingPage() {
           </div>
         )}
 
-        {/* Top-up — shown to everyone, explains how to add pages mid-month */}
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: 22, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
           <div style={{ width: 48, height: 48, borderRadius: 12, background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 22 }}>📈</div>
           <div style={{ flex: 1, minWidth: 240 }}>
             <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Need extra pages mid-month?</div>
             <div style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.6 }}>
-              Top-up <strong style={{ color: 'var(--accent)' }}>₹100 (≈$1)</strong> for <strong style={{ color: 'var(--accent)' }}>60 extra pages</strong> — added instantly to your current month. Available to all paid plans. Top-ups expire on the 1st of next month.
+              Top-up{' '}
+              <strong style={{ color: 'var(--accent)' }}>
+                {isIndia ? '₹100' : '$1.20'}
+              </strong>{' '}
+              for{' '}
+              <strong style={{ color: 'var(--accent)' }}>60 extra pages</strong>{' '}
+              — added instantly to your current month. Available to all paid plans. Top-ups expire on the 1st of next month.
             </div>
           </div>
         </div>
       </div>
 
+      {/* FAQ */}
       <div style={{ maxWidth: 720, margin: '0 auto', padding: '32px 24px 64px' }}>
         <h2 style={{ fontSize: 28, fontWeight: 600, textAlign: 'center', marginBottom: 32, letterSpacing: '-0.02em' }}>Pricing FAQ</h2>
         {FAQ.map((faq, i) => (

@@ -93,6 +93,10 @@ alter table public.profiles add column if not exists razorpay_subscription_id te
 alter table public.profiles add column if not exists subscription_ends_at timestamptz;
 alter table public.profiles add column if not exists plan_key text;
 alter table public.profiles add column if not exists bonus_pages integer not null default 0;
+-- Lemon Squeezy (international payments)
+alter table public.profiles add column if not exists payment_provider text check (payment_provider in ('razorpay', 'lemonsqueezy'));
+alter table public.profiles add column if not exists ls_subscription_id text;
+alter table public.profiles add column if not exists ls_customer_id text;
 
 -- Conversions: extra columns
 alter table public.conversions add column if not exists total_debit numeric(14,2) default 0;
@@ -103,6 +107,8 @@ alter table public.conversions add column if not exists completed_at timestamptz
 -- Day passes: extra columns (Razorpay refs)
 alter table public.day_passes add column if not exists razorpay_payment_id text;
 alter table public.day_passes add column if not exists razorpay_order_id text;
+-- Lemon Squeezy refs for day passes and top-ups
+alter table public.day_passes add column if not exists ls_order_id text;
 
 -- Team members: extra columns
 alter table public.team_members add column if not exists invited_at timestamptz default now();
@@ -245,6 +251,8 @@ create index if not exists idx_conversions_pending on public.conversions(status,
 create index if not exists idx_profiles_stripe_customer on public.profiles(stripe_customer_id);
 create index if not exists idx_profiles_razorpay_customer on public.profiles(razorpay_customer_id);
 create index if not exists idx_profiles_razorpay_subscription on public.profiles(razorpay_subscription_id);
+create index if not exists idx_profiles_ls_subscription on public.profiles(ls_subscription_id);
+create index if not exists idx_profiles_ls_customer on public.profiles(ls_customer_id);
 create index if not exists idx_profiles_api_key on public.profiles(api_key);
 create index if not exists idx_day_passes_user on public.day_passes(user_id, expires_at);
 create index if not exists idx_team_members_owner on public.team_members(owner_id, status);

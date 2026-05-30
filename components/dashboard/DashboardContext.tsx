@@ -20,6 +20,9 @@ export interface Profile {
   razorpay_subscription_id?: string
   subscription_ends_at?: string
   payment_failed_at?: string
+  payment_provider?: 'razorpay' | 'lemonsqueezy' | null
+  ls_subscription_id?: string
+  ls_customer_id?: string
 }
 
 export interface EffectiveProfile {

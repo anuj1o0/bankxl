@@ -14,10 +14,37 @@ export default function TopupButton({ variant = 'primary', label, onSuccess }: P
   const [loading, setLoading] = useState(false)
   const { openCheckout, verifyPayment } = useRazorpay()
   const toast = useToast()
-  const { refresh } = useDashboard()
+  const { refresh, profile } = useDashboard()
+
+  const isLSUser = profile?.payment_provider === 'lemonsqueezy'
 
   const buy = async () => {
     setLoading(true)
+
+    // ─── Lemon Squeezy top-up (international) ─────────────────────────
+    if (isLSUser) {
+      try {
+        const res = await fetch('/api/lemonsqueezy/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ plan: 'topup' }),
+        })
+        const data = await res.json()
+        if (!res.ok) {
+          toast.error('Could not start checkout', data.error || 'Try again.')
+          setLoading(false)
+          return
+        }
+        // Redirect to LS checkout — they'll be sent back to /dashboard after payment
+        window.location.href = data.url
+      } catch {
+        toast.error('Network error', 'Check your connection.')
+        setLoading(false)
+      }
+      return
+    }
+
+    // ─── Razorpay top-up (India) ───────────────────────────────────────
     let data: CheckoutResponse
     try {
       const res = await fetch('/api/razorpay/topup', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
@@ -34,12 +61,10 @@ export default function TopupButton({ variant = 'primary', label, onSuccess }: P
     try {
       await openCheckout(data, {
         onSuccess: async (success) => {
-          // Verify with backend — credits the bonus pages immediately
-          // even if webhook isn't reachable
           try {
             const result = await verifyPayment(success)
             if (result?.action === 'topup') {
-              toast.success('60 pages added', `Your bonus pages are ready to use.`)
+              toast.success('60 pages added', 'Your bonus pages are ready to use.')
             } else {
               toast.success('Payment received', 'Your account will update shortly.')
             }
@@ -58,7 +83,8 @@ export default function TopupButton({ variant = 'primary', label, onSuccess }: P
     }
   }
 
-  const labelText = label || 'Buy 60 pages — ₹100'
+  const priceLabel = isLSUser ? '$1.20' : '₹100'
+  const labelText = label || `Buy 60 pages — ${priceLabel}`
 
   if (variant === 'inline') {
     return (

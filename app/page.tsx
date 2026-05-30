@@ -7,7 +7,7 @@ import Footer from '@/components/Footer'
 import Converter from '@/components/Converter'
 import AnimatedNumber from '@/components/AnimatedNumber'
 
-const BANKS = ['SBI', 'HDFC', 'ICICI', 'Axis', 'PNB', 'Kotak', 'Yes Bank', 'Canara', 'BoB', 'IDFC First', 'IndusInd', 'Federal', 'Union', 'RBL', 'IDBI', 'AU SFB']
+const BANKS = ['SBI', 'HDFC', 'ICICI', 'Axis', 'PNB', 'Kotak', 'Yes Bank', 'Canara', 'BoB', 'IDFC First', 'IndusInd', 'Federal', 'Union', 'RBL', 'IDBI', 'AU SFB', 'Chase', 'Bank of America', 'Barclays', 'HSBC', 'ANZ']
 
 const STEPS = [
   { n: '01', label: 'Upload PDF', sub: 'Drop any bank statement — even password-protected ones (after unlock).', icon: '⬆' },
@@ -40,7 +40,7 @@ const FAQ = [
   { q: 'Can I cancel anytime?', a: 'Yes. Cancel from your dashboard with one click. You keep access until the end of your billing period. No questions asked.' },
   { q: 'Do you offer a free trial?', a: 'Yes. The free plan gives you 50 pages every month, no credit card needed. If you need a one-off, grab a ₹49 day pass for 100 pages in 24 hours.' },
   { q: 'Does it work on password-protected PDFs?', a: 'Remove the password first using any free PDF unlocker (or Adobe Acrobat). Once unlocked, BankXL handles the rest.' },
-  { q: 'Can I get a custom invoice for tax purposes?', a: 'Yes. Stripe automatically generates GST-compliant invoices for every payment. Email support@bankxl.in if you need anything custom.' },
+  { q: 'Can I get a custom invoice for tax purposes?', a: 'Yes. Indian users get GST-compliant invoices via Razorpay. International users get receipts via Lemon Squeezy. Email support@bankxl.in if you need anything custom.' },
 ]
 
 const COMPARISON = [
@@ -80,7 +80,7 @@ export default function LandingPage() {
               to <span style={{ color: 'var(--accent)' }}>Excel in 15 seconds.</span>
             </h1>
             <p style={{ fontSize: 17, color: 'var(--text-dim)', lineHeight: 1.6, marginBottom: 28, maxWidth: 540 }}>
-              Drop any bank statement — printed, scanned or digital. Our AI reads every transaction with surgical precision and gives you a clean Excel, CSV, JSON or Tally file. Built for Indian accountants.
+              Drop any bank statement — printed, scanned or digital. Our AI reads every transaction with surgical precision and gives you a clean Excel, CSV, JSON or Tally file. Works with 500+ banks worldwide.
             </p>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 32 }}>
               <Link href="#converter" style={{ background: 'var(--accent)', color: 'var(--on-accent)', padding: '14px 24px', borderRadius: 12, fontSize: 15, fontWeight: 600, textDecoration: 'none', boxShadow: 'var(--shadow-glow)' }}>
@@ -128,7 +128,7 @@ export default function LandingPage() {
 
       {/* BANK CHIPS */}
       <section style={{ maxWidth: 1100, margin: '0 auto', padding: '20px 24px 40px' }}>
-        <div className="mono" style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: 2, textAlign: 'center', marginBottom: 18 }}>WORKS WITH</div>
+        <div className="mono" style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: 2, textAlign: 'center', marginBottom: 18 }}>WORKS WITH 500+ BANKS WORLDWIDE</div>
         <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
           {BANKS.map(b => (
             <span key={b} className="mono" style={{ fontSize: 12, padding: '5px 12px', borderRadius: 6, border: '1px solid var(--border)', color: 'var(--text-dim)', background: 'var(--surface-2)' }}>{b}</span>
