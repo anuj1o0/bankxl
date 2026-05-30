@@ -1,8 +1,8 @@
-import type { Metadata, Viewport } from 'next'
+﻿import type { Metadata, Viewport } from 'next'
 import { ThemeProvider, NO_FLASH_SCRIPT } from '@/components/Theme'
 import './globals.css'
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://bankxl.in'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://bankxlai.com'
 const OG_IMAGE = `${APP_URL}/api/og`
 
 export const metadata: Metadata = {
@@ -93,7 +93,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     description: 'AI-powered bank statement PDF to Excel converter for Indian CAs and accountants.',
     contactPoint: {
       '@type': 'ContactPoint',
-      email: 'support@bankxl.in',
+      email: 'support@bankxlai.com',
       contactType: 'customer support',
       availableLanguage: ['English', 'Hindi'],
     },

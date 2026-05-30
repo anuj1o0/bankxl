@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase, createServiceSupabase } from '@/lib/supabase-server'
 import { setupLS, cancelSubscription } from '@/lib/lemonsqueezy'
 
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, message: 'Subscription was already cancelled.' })
     }
     console.error('[ls/cancel] cancel failed:', msg)
-    return NextResponse.json({ error: 'Could not cancel subscription. Email support@bankxl.in' }, { status: 500 })
+    return NextResponse.json({ error: 'Could not cancel subscription. Email support@bankxlai.com' }, { status: 500 })
   }
 
   // Lemon Squeezy cancel is at-period-end by default. Mark it in the DB so the UI

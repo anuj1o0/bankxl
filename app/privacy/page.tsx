@@ -1,4 +1,4 @@
-import LegalPage from '@/components/LegalPage'
+﻿import LegalPage from '@/components/LegalPage'
 
 export const metadata = {
   title: 'Privacy Policy — BankXL',
@@ -56,7 +56,7 @@ export default function Privacy() {
         <li><strong>Correction</strong> — update incorrect personal information from your dashboard</li>
         <li><strong>Export</strong> — download your conversion history as JSON</li>
       </ul>
-      <p>Email <a href="mailto:privacy@bankxl.in">privacy@bankxl.in</a> for any of these requests. We respond within 7 days.</p>
+      <p>Email <a href="mailto:privacy@bankxlai.com">privacy@bankxlai.com</a> for any of these requests. We respond within 7 days.</p>
 
       <h2>6. Children</h2>
       <p>BankXL is not intended for use by individuals under 18.</p>
@@ -65,7 +65,7 @@ export default function Privacy() {
       <p>We will notify users by email of any material changes at least 14 days before they take effect.</p>
 
       <h2>8. Contact</h2>
-      <p>Questions? Email <a href="mailto:privacy@bankxl.in">privacy@bankxl.in</a> or write to us at our registered address (provided on request).</p>
+      <p>Questions? Email <a href="mailto:privacy@bankxlai.com">privacy@bankxlai.com</a> or write to us at our registered address (provided on request).</p>
     </LegalPage>
   )
 }

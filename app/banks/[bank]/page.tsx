@@ -5,7 +5,7 @@ import Nav from '@/components/Nav'
 import Footer from '@/components/Footer'
 import { BANK_PAGES, ALL_BANK_SLUGS } from './data'
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://bankxl.in'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://bankxlai.com'
 
 interface Props {
   params: { bank: string }
