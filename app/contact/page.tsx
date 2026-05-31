@@ -38,28 +38,28 @@ export default function Contact() {
             icon="📧"
             title="General support"
             desc="For questions, bugs, feature requests."
-            link="mailto:support@bankxlai.com"
-            action="support@bankxlai.com →"
+            link="mailto:support@banlxlai.com"
+            action="support@banlxlai.com →"
           />
           <Card
             icon="🔒"
             title="Privacy & data"
             desc="For GDPR/data deletion and privacy questions."
-            link="mailto:privacy@bankxlai.com"
-            action="privacy@bankxlai.com →"
+            link="mailto:privacy@banlxlai.com"
+            action="privacy@banlxlai.com →"
           />
           <Card
             icon="💼"
             title="Sales & enterprise"
             desc="For CA firms with 10+ users or volume pricing."
-            link="mailto:sales@bankxlai.com"
-            action="sales@bankxlai.com →"
+            link="mailto:sales@banlxlai.com"
+            action="sales@banlxlai.com →"
           />
           <Card
             icon="🐛"
             title="A bank format isn't working?"
             desc="Send us a sample (any redacted statement is fine). We tune it within 48 hours."
-            link="mailto:support@bankxlai.com?subject=Bank%20format%20issue"
+            link="mailto:support@banlxlai.com?subject=Bank%20format%20issue"
             action="Email a sample →"
           />
         </div>

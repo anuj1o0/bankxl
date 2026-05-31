@@ -63,14 +63,14 @@ export default function ApiPage() {
   }
 
   const examples: Record<string, string> = {
-    curl: `curl -X POST "https://bankxlai.com/api/v1/convert?format=json" \\
+    curl: `curl -X POST "https://banlxlai.com/api/v1/convert?format=json" \\
   -H "Authorization: Bearer ${showKey ? apiKey : 'YOUR_API_KEY'}" \\
   -F "pdf=@statement.pdf"`,
     python: `import requests
 
 with open("statement.pdf", "rb") as f:
     r = requests.post(
-        "https://bankxlai.com/api/v1/convert?format=json",
+        "https://banlxlai.com/api/v1/convert?format=json",
         headers={"Authorization": "Bearer ${showKey ? apiKey : 'YOUR_API_KEY'}"},
         files={"pdf": f}
     )
@@ -80,7 +80,7 @@ print(f"Bank: {data['meta']['bank_name']}")`,
     node: `import fs from 'node:fs'
 
 const file = fs.readFileSync('statement.pdf')
-const r = await fetch('https://bankxlai.com/api/v1/convert?format=json', {
+const r = await fetch('https://banlxlai.com/api/v1/convert?format=json', {
   method: 'POST',
   headers: {
     'Authorization': 'Bearer ${showKey ? apiKey : 'YOUR_API_KEY'}',
@@ -158,7 +158,7 @@ console.log(\`\${data.transactions.length} transactions extracted\`)`,
         </div>
 
         <div style={{ fontSize: 13, color: 'var(--text-dim)', textAlign: 'center', padding: 20 }}>
-          Need help? <Link href="/api-docs" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Read the full docs</Link> or email <a href="mailto:support@bankxlai.com" style={{ color: 'var(--accent)', textDecoration: 'none' }}>support@bankxlai.com</a>
+          Need help? <Link href="/api-docs" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Read the full docs</Link> or email <a href="mailto:support@banlxlai.com" style={{ color: 'var(--accent)', textDecoration: 'none' }}>support@banlxlai.com</a>
         </div>
       </div>
     </>

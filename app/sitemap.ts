@@ -2,7 +2,7 @@
 import { ALL_BANK_SLUGS } from './banks/[bank]/data'
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = (process.env.NEXT_PUBLIC_APP_URL || 'https://bankxlai.com').replace(/\/$/, '')
+  const base = (process.env.NEXT_PUBLIC_APP_URL || 'https://banlxlai.com').replace(/\/$/, '')
   const now = new Date()
 
   const staticPages = [

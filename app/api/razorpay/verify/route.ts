@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
     } catch (e: any) {
       console.error('[verify] auto-recover failed:', e?.error?.description || e?.message)
       return NextResponse.json({
-        error: 'Could not search Razorpay for your subscription. Please contact support@bankxlai.com.',
+        error: 'Could not search Razorpay for your subscription. Please contact support@banlxlai.com.',
       }, { status: 500 })
     }
   }
