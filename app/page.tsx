@@ -40,7 +40,7 @@ const FAQ = [
   { q: 'Can I cancel anytime?', a: 'Yes. Cancel from your dashboard with one click. You keep access until the end of your billing period. No questions asked.' },
   { q: 'Do you offer a free trial?', a: 'Yes. The free plan gives you 50 pages every month, no credit card needed. If you need a one-off, grab a ₹49 day pass for 100 pages in 24 hours.' },
   { q: 'Does it work on password-protected PDFs?', a: 'Remove the password first using any free PDF unlocker (or Adobe Acrobat). Once unlocked, BankXL handles the rest.' },
-  { q: 'Can I get a custom invoice for tax purposes?', a: 'Yes. Indian users get GST-compliant invoices via Razorpay. International users get receipts via Lemon Squeezy. Email support@bankxlai.com if you need anything custom.' },
+  { q: 'Can I get a custom invoice for tax purposes?', a: 'Yes. Indian users get GST-compliant invoices via Razorpay. International users get receipts via Lemon Squeezy. Email support@banlxlai.com if you need anything custom.' },
 ]
 
 const COMPARISON = [

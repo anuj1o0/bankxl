@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
   } catch (e: any) {
     console.error('[razorpay/cancel] failed:', e?.error?.description || e?.message)
     return NextResponse.json({
-      error: e?.error?.description || 'Could not cancel subscription. Please email support@bankxlai.com.',
+      error: e?.error?.description || 'Could not cancel subscription. Please email support@banlxlai.com.',
     }, { status: 500 })
   }
 }

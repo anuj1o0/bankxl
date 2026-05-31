@@ -1,4 +1,4 @@
-# BankXL — Bank Statement PDF to Excel Converter
+﻿# BankXL — Bank Statement PDF to Excel Converter
 
 Production-grade SaaS that converts bank statement PDFs into clean Excel/CSV/JSON/Tally XML files using free Gemini AI. Built for the Indian CA market.
 
@@ -163,6 +163,6 @@ Aim: first 10 paying users in 30 days.
 
 ## Support
 
-- support@bankxlai.com (general)
-- privacy@bankxlai.com (data/GDPR)
-- sales@bankxlai.com (enterprise)
+- support@banlxlai.com (general)
+- privacy@banlxlai.com (data/GDPR)
+- sales@banlxlai.com (enterprise)

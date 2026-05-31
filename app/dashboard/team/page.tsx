@@ -164,7 +164,7 @@ export default function TeamPage() {
         </div>
 
         <div style={{ marginTop: 18, fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>
-          Need more than {max} seats? Email <a href="mailto:sales@bankxlai.com" style={{ color: 'var(--accent)', textDecoration: 'none' }}>sales@bankxlai.com</a>
+          Need more than {max} seats? Email <a href="mailto:sales@banlxlai.com" style={{ color: 'var(--accent)', textDecoration: 'none' }}>sales@banlxlai.com</a>
         </div>
       </div>
     </>

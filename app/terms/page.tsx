@@ -14,7 +14,7 @@ export default function Terms() {
       <p>You must be at least 18 years old and have legal authority to enter into this agreement.</p>
 
       <h2>2. Account</h2>
-      <p>You are responsible for keeping your login credentials secure. Notify us immediately at <a href="mailto:support@bankxlai.com">support@bankxlai.com</a> if you suspect unauthorized access.</p>
+      <p>You are responsible for keeping your login credentials secure. Notify us immediately at <a href="mailto:support@banlxlai.com">support@banlxlai.com</a> if you suspect unauthorized access.</p>
 
       <h2>3. Acceptable use</h2>
       <p>You agree to use BankXL only with documents you legally own or have permission to convert. Specifically, you agree NOT to:</p>
@@ -58,7 +58,7 @@ export default function Terms() {
       <p>We may update these Terms occasionally. Material changes will be communicated via email at least 14 days before they take effect.</p>
 
       <h2>13. Contact</h2>
-      <p>Questions? <a href="mailto:support@bankxlai.com">support@bankxlai.com</a></p>
+      <p>Questions? <a href="mailto:support@banlxlai.com">support@banlxlai.com</a></p>
     </LegalPage>
   )
 }
