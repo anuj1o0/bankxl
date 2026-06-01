@@ -1,5 +1,6 @@
 ﻿import type { Metadata, Viewport } from 'next'
 import { ThemeProvider, NO_FLASH_SCRIPT } from '@/components/Theme'
+import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://banlxlai.com'
@@ -177,6 +178,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <ThemeProvider>{children}</ThemeProvider>
+        <Analytics />
       </body>
     </html>
   )
