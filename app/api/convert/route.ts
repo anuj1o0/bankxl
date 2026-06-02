@@ -282,9 +282,11 @@ export async function POST(req: NextRequest) {
   const tExtract = Date.now()
   let extracted: ExtractionResult
   try {
-    // PDFs > 10 pages → split into 10-page chunks, run in parallel.
-    // Single-chunk fast path for small PDFs (no split overhead).
-    const CHUNK_THRESHOLD = 10
+    // PDFs > 5 pages → split into 5-page chunks, run in parallel.
+    // Smaller chunks = faster Gemini response per chunk (less output JSON),
+    // higher throughput when running concurrently. A 20-page PDF becomes
+    // 4 parallel chunks of ~100-200 tx each, completing in ~25-30s.
+    const CHUNK_THRESHOLD = 5
     const extractor = pageCount > CHUNK_THRESHOLD
       ? extractFromPDFChunked(fileBuffer, CHUNK_THRESHOLD)
       : extractFromPDF(fileBuffer)
@@ -292,7 +294,7 @@ export async function POST(req: NextRequest) {
     extracted = await Promise.race([
       extractor,
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('AI extraction timed out. Try a smaller PDF or split it into months.')), 50000)
+        setTimeout(() => reject(new Error('AI extraction timed out. Try a smaller PDF or split it into months.')), 55000)
       ),
     ])
     console.log(`[convert] extraction: ${Date.now() - tExtract}ms (${extracted.transactions.length} tx, ${pageCount} pages)`)
