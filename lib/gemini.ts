@@ -148,7 +148,7 @@ async function callGeminiInline(pdfBuffer: Buffer, apiKey: string, model: string
         responseMimeType: 'application/json',
       },
     }),
-    signal: AbortSignal.timeout(120000),
+    signal: AbortSignal.timeout(45000),
   })
 
   console.log(`[gemini] ${model} inline: ${Date.now() - t0}ms status=${res.status}`)
@@ -223,7 +223,7 @@ async function callGeminiFile(pdfBuffer: Buffer, apiKey: string, model: string):
         responseMimeType: 'application/json',
       },
     }),
-    signal: AbortSignal.timeout(120000),
+    signal: AbortSignal.timeout(45000),
   })
 
   console.log(`[gemini] ${model} file: ${Date.now() - t0}ms status=${res.status}`)
@@ -236,6 +236,70 @@ async function callGeminiFile(pdfBuffer: Buffer, apiKey: string, model: string):
     throw new Error(`Extraction failed (${res.status}): ${msg}`)
   }
   return parseResponse(await res.json(), model)
+}
+
+// ─── Split a PDF into N-page chunks ───────────────────────────────────────────
+// Returns an array of Buffers, each a valid PDF containing a slice of the input.
+export async function splitPdfIntoChunks(pdfBuffer: Buffer, pagesPerChunk: number): Promise<Buffer[]> {
+  const { PDFDocument } = await import('pdf-lib')
+  const src = await PDFDocument.load(pdfBuffer)
+  const totalPages = src.getPageCount()
+
+  if (totalPages <= pagesPerChunk) return [pdfBuffer]
+
+  const chunks: Buffer[] = []
+  for (let start = 0; start < totalPages; start += pagesPerChunk) {
+    const end = Math.min(start + pagesPerChunk, totalPages)
+    const out = await PDFDocument.create()
+    const indices = Array.from({ length: end - start }, (_, i) => start + i)
+    const copied = await out.copyPages(src, indices)
+    copied.forEach(p => out.addPage(p))
+    const bytes = await out.save()
+    chunks.push(Buffer.from(bytes))
+  }
+  return chunks
+}
+
+// ─── Chunked parallel extraction ──────────────────────────────────────────────
+// For large PDFs: split into chunks, extract all chunks in parallel, merge results.
+// Each chunk runs through the same 3-model cascade — independently and concurrently.
+export async function extractFromPDFChunked(
+  pdfBuffer: Buffer,
+  pagesPerChunk: number = 10
+): Promise<ExtractionResult> {
+  const tSplit = Date.now()
+  const chunks = await splitPdfIntoChunks(pdfBuffer, pagesPerChunk)
+  console.log(`[gemini] split into ${chunks.length} chunks in ${Date.now() - tSplit}ms`)
+
+  if (chunks.length === 1) {
+    // No splitting was needed
+    return extractFromPDF(chunks[0])
+  }
+
+  const tExtract = Date.now()
+  // Run all chunks in parallel — Gemini paid tier handles 1000+ RPM
+  const settled = await Promise.allSettled(chunks.map(c => extractFromPDF(c)))
+  console.log(`[gemini] parallel extraction of ${chunks.length} chunks: ${Date.now() - tExtract}ms`)
+
+  const successes: ExtractionResult[] = []
+  const failures: string[] = []
+  settled.forEach((s, i) => {
+    if (s.status === 'fulfilled') {
+      successes.push(s.value)
+    } else {
+      failures.push(`chunk ${i + 1}: ${String(s.reason?.message || s.reason).slice(0, 100)}`)
+    }
+  })
+
+  if (successes.length === 0) {
+    throw new Error(`All chunks failed: ${failures.join('; ')}`)
+  }
+
+  if (failures.length > 0) {
+    console.warn(`[gemini] ${failures.length}/${chunks.length} chunks failed:`, failures)
+  }
+
+  return mergeAndClean(successes)
 }
 
 // ─── Main export ──────────────────────────────────────────────────────────────

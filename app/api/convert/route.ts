@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { generateExcel } from '@/lib/excel'
-import { extractFromPDF, mergeAndClean, ExtractionResult } from '@/lib/gemini'
+import { extractFromPDF, extractFromPDFChunked, mergeAndClean, ExtractionResult } from '@/lib/gemini'
 import { toCSV, toJSON, toTallyXML, FORMAT_INFO, ExportFormat } from '@/lib/formats'
 
-export const maxDuration = 300
+// Hobby plan caps at 60s; Pro plan supports up to 300s. With chunked
+// extraction (10 pages per chunk, parallel), even 50-page PDFs finish
+// in well under 60s on the Hobby plan.
+export const maxDuration = 60
 export const runtime = 'nodejs'
 
 type AuthedUser = { id: string; email: string; isDev?: boolean }
@@ -273,18 +276,26 @@ export async function POST(req: NextRequest) {
     await updateConversion(convId, { pages: pageCount })
   }
 
-  // Step 4: extract — hard timeout so we always have buffer to update the row
-  // Vercel free tier maxDuration is 60s; we keep 5s buffer for DB write + Excel build
+  // Step 4: extract — chunk large PDFs and run chunks in parallel.
+  // 50s hard timeout keeps 10s buffer for DB writes + Excel build before
+  // Vercel kills the function at maxDuration.
   const tExtract = Date.now()
   let extracted: ExtractionResult
   try {
+    // PDFs > 10 pages → split into 10-page chunks, run in parallel.
+    // Single-chunk fast path for small PDFs (no split overhead).
+    const CHUNK_THRESHOLD = 10
+    const extractor = pageCount > CHUNK_THRESHOLD
+      ? extractFromPDFChunked(fileBuffer, CHUNK_THRESHOLD)
+      : extractFromPDF(fileBuffer)
+
     extracted = await Promise.race([
-      extractFromPDF(fileBuffer),
+      extractor,
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('AI extraction timed out. Try a smaller PDF or split it into months.')), 280000)
+        setTimeout(() => reject(new Error('AI extraction timed out. Try a smaller PDF or split it into months.')), 50000)
       ),
     ])
-    console.log(`[convert] extraction: ${Date.now() - tExtract}ms (${extracted.transactions.length} tx)`)
+    console.log(`[convert] extraction: ${Date.now() - tExtract}ms (${extracted.transactions.length} tx, ${pageCount} pages)`)
   } catch (err: any) {
     console.error(`[convert] extraction failed after ${Date.now() - tExtract}ms:`, err.message)
     await updateConversion(convId, {
