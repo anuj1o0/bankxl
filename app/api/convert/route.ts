@@ -3,7 +3,7 @@ import { generateExcel } from '@/lib/excel'
 import { extractFromPDF, mergeAndClean, ExtractionResult } from '@/lib/gemini'
 import { toCSV, toJSON, toTallyXML, FORMAT_INFO, ExportFormat } from '@/lib/formats'
 
-export const maxDuration = 60
+export const maxDuration = 300
 export const runtime = 'nodejs'
 
 type AuthedUser = { id: string; email: string; isDev?: boolean }
@@ -281,7 +281,7 @@ export async function POST(req: NextRequest) {
     extracted = await Promise.race([
       extractFromPDF(fileBuffer),
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('AI extraction timed out. Try a smaller PDF or split it into months.')), 55000)
+        setTimeout(() => reject(new Error('AI extraction timed out. Try a smaller PDF or split it into months.')), 280000)
       ),
     ])
     console.log(`[convert] extraction: ${Date.now() - tExtract}ms (${extracted.transactions.length} tx)`)
