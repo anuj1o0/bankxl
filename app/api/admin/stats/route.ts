@@ -72,10 +72,11 @@ export async function GET() {
   ])
 
   // Plan breakdown
-  const planData = planBreakdownRes.data || []
+  type PlanRow = { plan: string; payment_provider: string | null; created_at: string }
+  const planData = (planBreakdownRes.data || []) as PlanRow[]
   const plans = { free: 0, pro: 0, firm: 0 }
   const providers = { razorpay: 0, lemonsqueezy: 0 }
-  planData.forEach(p => {
+  planData.forEach((p: PlanRow) => {
     if (p.plan in plans) plans[p.plan as keyof typeof plans]++
     if (p.payment_provider === 'razorpay') providers.razorpay++
     if (p.payment_provider === 'lemonsqueezy') providers.lemonsqueezy++
@@ -88,7 +89,7 @@ export async function GET() {
     const key = d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric' })
     signupsByDay[key] = 0
   }
-  planData.forEach(p => {
+  planData.forEach((p: PlanRow) => {
     const d = new Date(p.created_at)
     if (d >= new Date(weekStart)) {
       const key = d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric' })
@@ -100,11 +101,11 @@ export async function GET() {
   const mrr = plans.pro * 499 + plans.firm * 4999
 
   // Pages this month
-  const pagesThisMonth = (pagesThisMonthRes.data || []).reduce((s, r) => s + (r.pages || 0), 0)
+  const pagesThisMonth = (pagesThisMonthRes.data || []).reduce((s: number, r: { pages: number | null }) => s + (r.pages || 0), 0)
 
   // Bank usage
   const bankCounts: Record<string, number> = {}
-  ;(bankUsageRes.data || []).forEach(c => {
+  ;(bankUsageRes.data || []).forEach((c: { bank_name: string | null }) => {
     const b = c.bank_name || 'Unknown'
     bankCounts[b] = (bankCounts[b] || 0) + 1
   })
@@ -116,7 +117,7 @@ export async function GET() {
   // API success rate (last 100 calls)
   const logs = apiLogsRes.data || []
   const apiSuccessRate = logs.length
-    ? Math.round((logs.filter(l => l.status < 400).length / logs.length) * 100)
+    ? Math.round((logs.filter((l: { status: number }) => l.status < 400).length / logs.length) * 100)
     : null
 
   return NextResponse.json({
