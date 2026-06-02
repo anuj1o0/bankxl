@@ -148,7 +148,7 @@ async function callGeminiInline(pdfBuffer: Buffer, apiKey: string, model: string
         responseMimeType: 'application/json',
       },
     }),
-    signal: AbortSignal.timeout(45000),
+    signal: AbortSignal.timeout(50000),
   })
 
   console.log(`[gemini] ${model} inline: ${Date.now() - t0}ms status=${res.status}`)
@@ -223,7 +223,7 @@ async function callGeminiFile(pdfBuffer: Buffer, apiKey: string, model: string):
         responseMimeType: 'application/json',
       },
     }),
-    signal: AbortSignal.timeout(45000),
+    signal: AbortSignal.timeout(50000),
   })
 
   console.log(`[gemini] ${model} file: ${Date.now() - t0}ms status=${res.status}`)
