@@ -260,50 +260,84 @@ export async function splitPdfIntoChunks(pdfBuffer: Buffer, pagesPerChunk: numbe
   return chunks
 }
 
-// ─── Chunked parallel extraction ──────────────────────────────────────────────
-// For large PDFs: split into chunks, extract all chunks in parallel, merge results.
-// Each chunk runs through the same 3-model cascade — independently and concurrently.
+// ─── Chunked parallel extraction with sequential retry ───────────────────────
+// Strategy:
+//   1. Split PDF into 2-page chunks (small → ~60-90 tx → ~4K output tokens →
+//      responds in 8-15s).
+//   2. Fire all chunks in parallel. Most succeed fast.
+//   3. Any failed chunks get retried SEQUENTIALLY at the end (no parallel
+//      contention, more bandwidth per call). Each retry uses skipRpmRetry=false
+//      so it can backoff once if needed.
+//
+// This way we never silently drop pages — if parallel fails, sequential picks
+// it up. Total time for 20-page PDF: ~15-25s (parallel) + ~0-30s (retries).
 export async function extractFromPDFChunked(
   pdfBuffer: Buffer,
-  pagesPerChunk: number = 10
+  pagesPerChunk: number = 2
 ): Promise<ExtractionResult> {
   const tSplit = Date.now()
   const chunks = await splitPdfIntoChunks(pdfBuffer, pagesPerChunk)
-  console.log(`[gemini] split into ${chunks.length} chunks in ${Date.now() - tSplit}ms`)
+  console.log(`[gemini] split into ${chunks.length} chunks of ${pagesPerChunk} pages in ${Date.now() - tSplit}ms`)
 
   if (chunks.length === 1) {
-    // No splitting was needed
     return extractFromPDF(chunks[0])
   }
 
-  const tExtract = Date.now()
-  // Run all chunks in parallel — Gemini paid tier handles 1000+ RPM
-  const settled = await Promise.allSettled(chunks.map(c => extractFromPDF(c)))
-  console.log(`[gemini] parallel extraction of ${chunks.length} chunks: ${Date.now() - tExtract}ms`)
+  // ─── Pass 1: all chunks in parallel ────────────────────────────────────────
+  const tPar = Date.now()
+  const parallelResults = await Promise.allSettled(
+    chunks.map(c => extractFromPDF(c, /* skipRpmRetry */ true))
+  )
+  console.log(`[gemini] parallel pass: ${Date.now() - tPar}ms`)
 
   const successes: ExtractionResult[] = []
-  const failures: string[] = []
-  settled.forEach((s, i) => {
-    if (s.status === 'fulfilled') {
-      successes.push(s.value)
+  const failedIndices: number[] = []
+  parallelResults.forEach((r, i) => {
+    if (r.status === 'fulfilled') {
+      successes.push(r.value)
     } else {
-      failures.push(`chunk ${i + 1}: ${String(s.reason?.message || s.reason).slice(0, 100)}`)
+      failedIndices.push(i)
+      console.warn(`[gemini] parallel chunk ${i + 1} failed: ${String(r.reason?.message || r.reason).slice(0, 120)}`)
     }
   })
 
-  if (successes.length === 0) {
-    throw new Error(`All chunks failed: ${failures.join('; ')}`)
+  // ─── Pass 2: sequential retry of failed chunks ─────────────────────────────
+  if (failedIndices.length > 0) {
+    console.log(`[gemini] retrying ${failedIndices.length} failed chunks sequentially…`)
+    const tRetry = Date.now()
+    const stillFailed: string[] = []
+    for (const i of failedIndices) {
+      try {
+        const result = await extractFromPDF(chunks[i], /* skipRpmRetry */ false)
+        successes.push(result)
+        console.log(`[gemini] chunk ${i + 1} succeeded on sequential retry`)
+      } catch (err: any) {
+        const msg = String(err?.message || err).slice(0, 120)
+        stillFailed.push(`chunk ${i + 1}: ${msg}`)
+        console.error(`[gemini] chunk ${i + 1} failed on retry too: ${msg}`)
+      }
+    }
+    console.log(`[gemini] sequential retry pass: ${Date.now() - tRetry}ms`)
+
+    if (stillFailed.length > 0 && successes.length === 0) {
+      throw new Error(`All chunks failed: ${stillFailed.join('; ')}`)
+    }
+    if (stillFailed.length > 0) {
+      // Some chunks failed even after retry — proceed with partial results,
+      // but warn user via stderr (visible in Vercel logs).
+      console.warn(`[gemini] ${stillFailed.length}/${chunks.length} chunks failed after retry. Returning partial results.`)
+    }
   }
 
-  if (failures.length > 0) {
-    console.warn(`[gemini] ${failures.length}/${chunks.length} chunks failed:`, failures)
-  }
-
+  console.log(`[gemini] final: ${successes.length}/${chunks.length} chunks succeeded`)
   return mergeAndClean(successes)
 }
 
 // ─── Main export ──────────────────────────────────────────────────────────────
-export async function extractFromPDF(pdfBuffer: Buffer): Promise<ExtractionResult> {
+// skipRpmRetry: when true (chunked extraction), don't wait 20s on RPM errors
+// — cascade to the next model immediately, since we're parallel and waiting
+// would just blow the AbortSignal timeout.
+export async function extractFromPDF(pdfBuffer: Buffer, skipRpmRetry: boolean = false): Promise<ExtractionResult> {
   const apiKey = process.env.GEMINI_API_KEY
   if (!apiKey) throw new Error('GEMINI_API_KEY not set. Get a free key at https://aistudio.google.com/app/apikey')
 
@@ -319,8 +353,10 @@ export async function extractFromPDF(pdfBuffer: Buffer): Promise<ExtractionResul
     const isLast = i === models.length - 1
 
     try {
-      // Retry RPM errors (not daily limits) with backoff
-      const result = await withRetry(() => call(model), /* retries= */ 1, /* delayMs= */ 20000)
+      // For single-PDF calls: retry RPM with 20s backoff (1 retry).
+      // For chunked calls: no retry — cascade to next model immediately.
+      const retries = skipRpmRetry ? 0 : 1
+      const result = await withRetry(() => call(model), retries, /* delayMs= */ 20000)
 
       if (result.transactions.length > 0) {
         // Try to fix missing bank name via IFSC

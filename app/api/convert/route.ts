@@ -282,13 +282,14 @@ export async function POST(req: NextRequest) {
   const tExtract = Date.now()
   let extracted: ExtractionResult
   try {
-    // PDFs > 5 pages → split into 5-page chunks, run in parallel.
-    // Smaller chunks = faster Gemini response per chunk (less output JSON),
-    // higher throughput when running concurrently. A 20-page PDF becomes
-    // 4 parallel chunks of ~100-200 tx each, completing in ~25-30s.
-    const CHUNK_THRESHOLD = 5
+    // Small PDFs (≤ 6 pages) → single Gemini call, no chunking.
+    //   - These already finish in 45-50s as one request, no benefit from splitting.
+    // Larger PDFs (> 6 pages) → split into 2-page chunks, parallel + sequential
+    // retry for any failed chunks. See extractFromPDFChunked() for details.
+    const CHUNK_THRESHOLD = 6
+    const PAGES_PER_CHUNK = 2
     const extractor = pageCount > CHUNK_THRESHOLD
-      ? extractFromPDFChunked(fileBuffer, CHUNK_THRESHOLD)
+      ? extractFromPDFChunked(fileBuffer, PAGES_PER_CHUNK)
       : extractFromPDF(fileBuffer)
 
     extracted = await Promise.race([
