@@ -1,7 +1,14 @@
 /**
- * lib/gemini.ts — fast PDF extraction using Google Gemini 2.5 Flash
- * Free tier: 1,500 requests/day, 15 req/min
- * Get key: https://aistudio.google.com/app/apikey
+ * lib/gemini.ts — bank statement extraction using Google Gemini
+ *
+ * Model cascade (fastest → most accurate, each with separate quota pool):
+ *   1. gemini-2.5-flash-lite  — fastest, cheapest (primary)
+ *   2. gemini-2.5-flash       — more accurate  (fallback 1)
+ *   3. gemini-1.5-flash       — legacy, separate quota (fallback 2 / daily-limit escape)
+ *
+ * IMPORTANT: Enable Gemini billing at https://aistudio.google.com/app/apikey
+ * Free tier: only 20 req/day per model → will hit limit quickly.
+ * Paid tier: 1000+ RPM, no daily cap. Cost: ~₹0.05 per 20-page statement.
  */
 
 export interface Transaction {
@@ -31,59 +38,98 @@ export interface ExtractionResult {
   transactions: Transaction[]
 }
 
-// gemini-2.5-flash-lite is ~3x faster than gemini-2.5-flash for similar accuracy on
-// structured extraction. We fall back to gemini-2.5-flash if lite returns 0 transactions.
-const MODEL_FAST = 'gemini-2.5-flash-lite'
-const MODEL_ACCURATE = 'gemini-2.5-flash'
-const BASE = 'https://generativelanguage.googleapis.com/v1beta'
-const INLINE_THRESHOLD = 7 * 1024 * 1024 // 7 MB — under this, use inline (faster)
+const MODEL_FAST     = 'gemini-2.5-flash-lite'  // primary — fastest
+const MODEL_ACCURATE = 'gemini-2.5-flash'         // fallback 1
+const MODEL_LEGACY   = 'gemini-1.5-flash'          // fallback 2 — different quota pool
 
-const PROMPT = `Extract data from this bank statement PDF.
-Return ONLY a single valid JSON object. No markdown, no code fences, no explanation.
+const BASE             = 'https://generativelanguage.googleapis.com/v1beta'
+const INLINE_THRESHOLD = 7 * 1024 * 1024  // 7 MB — use inline below this
+const MAX_OUTPUT_TOKENS = 65536            // max for all Flash models
 
-Schema (every key must be present, use null when unknown):
+// ─── Indian bank name hints for better detection ──────────────────────────────
+const BANK_HINTS = `
+Major Indian banks (detect from header/logo/letterhead/IFSC prefix):
+SBI/State Bank of India (SBIN), HDFC Bank (HDFC), ICICI Bank (ICIC),
+Axis Bank (UTIB), Kotak Mahindra Bank (KKBK), Punjab National Bank/PNB (PUNB),
+Bank of Baroda (BARB), Canara Bank (CNRB), Union Bank of India (UBIN),
+Bank of India (BKID), Central Bank of India (CBIN), Indian Bank (IDIB),
+IDFC First Bank (IDFB), IndusInd Bank (INDB), Yes Bank (YESB),
+Federal Bank (FDRL), Karnataka Bank (KARB), South Indian Bank (SIBL),
+RBL Bank (RATN), DCB Bank (DCBL), Bandhan Bank (BDBL),
+AU Small Finance Bank (AUBL), Ujjivan Small Finance Bank (UJVN),
+IDBI Bank (IBKL), Bank of Maharashtra (MAHB), UCO Bank (UCBA),
+Punjab & Sind Bank (PSIB), Indian Overseas Bank (IOBA).
+Also detect: credit card statements (Amex, SBI Card, HDFC Credit Card, etc.)`.trim()
+
+const PROMPT = `Extract all data from this bank statement PDF.
+Return ONLY a single valid JSON object — no markdown, no code fences, no explanation.
+
+${BANK_HINTS}
+
+Schema (every key required, use null if unknown):
 {
   "meta": {
-    "bank_name": "string|null",
+    "bank_name": "Full bank name (look in header, footer, watermark, letterhead — use IFSC prefix if needed)",
     "account_holder": "string|null",
     "account_no": "string|null",
     "ifsc": "string|null",
     "period_from": "YYYY-MM-DD|null",
     "period_to": "YYYY-MM-DD|null",
-    "opening_balance": "number|null",
-    "closing_balance": "number|null",
-    "currency": "INR|USD|EUR|GBP|AED|SGD|...",
-    "total_pages": "number|null"
+    "opening_balance": number|null,
+    "closing_balance": number|null,
+    "currency": "INR",
+    "total_pages": number|null
   },
   "transactions": [
     {"date":"YYYY-MM-DD","description":"string","debit":number|null,"credit":number|null,"balance":number|null,"ref_no":"string|null"}
   ]
 }
 
-Strict rules:
-- Amounts: plain numbers, no commas, no currency symbols.
-- Dates: always YYYY-MM-DD.
-- For description, keep narration concise but include payee/UPI ID/cheque info.
-- Debit (Dr/Withdrawal): put amount in "debit", credit must be null.
-- Credit (Cr/Deposit): put amount in "credit", debit must be null.
-- Ref/Cheque/UPI ref/UTR goes in "ref_no".
-- Skip header rows, page totals, "Brought Forward", "Carried Forward", and OPENING/CLOSING balance rows (capture them in meta instead).
-- Default currency to INR if Indian bank.
-- Include EVERY transaction row across all pages.`
+Rules:
+- Amounts: plain numbers only, no commas, no currency symbols. E.g. 12400.50 not "12,400.50".
+- Dates: YYYY-MM-DD always. If year is missing, infer from statement period.
+- Debit (Dr/Withdrawal/Debit): debit=amount, credit=null.
+- Credit (Cr/Deposit/Credit): credit=amount, debit=null.
+- ref_no: UPI ref / UTR / cheque number / IMPS ref.
+- SKIP: header rows, page totals, "Brought Forward", "Carried Forward", opening/closing balance rows.
+- bank_name: NEVER return null or "Unknown". If you cannot determine the bank, return your best guess based on IFSC, logo, or format.
+- Include EVERY transaction across ALL pages. Do not truncate.
+- Default currency to INR for Indian banks.`
 
 const EMPTY_META: StatementMeta = {
-  bank_name: null,
-  account_holder: null,
-  account_no: null,
-  ifsc: null,
-  period_from: null,
-  period_to: null,
-  opening_balance: null,
-  closing_balance: null,
-  currency: 'INR',
-  total_pages: null,
+  bank_name: null, account_holder: null, account_no: null, ifsc: null,
+  period_from: null, period_to: null, opening_balance: null, closing_balance: null,
+  currency: 'INR', total_pages: null,
 }
 
+// ─── Retry helper ─────────────────────────────────────────────────────────────
+// Retries on RPM (per-minute) 429s with a backoff delay.
+// Does NOT retry RPD (daily quota exhausted) — those need a model switch.
+async function withRetry<T>(fn: () => Promise<T>, retries = 2, delayMs = 20000): Promise<T> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await fn()
+    } catch (err: any) {
+      const msg = String(err?.message || '')
+      const isRpm  = /busy|rate.?limit|resource.?exhausted|quota/i.test(msg) && !/daily|per.?day|rpd/i.test(msg)
+      const isDone = attempt >= retries
+      if (isRpm && !isDone) {
+        console.warn(`[gemini] RPM limit hit, waiting ${delayMs/1000}s before retry ${attempt + 1}…`)
+        await new Promise(r => setTimeout(r, delayMs * (attempt + 1)))
+        continue
+      }
+      throw err
+    }
+  }
+  throw new Error('Gemini: max retries exceeded')
+}
+
+// ─── Detect if error is a daily (RPD) exhaustion ─────────────────────────────
+function isDailyLimitError(msg: string): boolean {
+  return /daily.?limit|quota.?exceeded|resource.?exhausted|per.?day/i.test(msg)
+}
+
+// ─── Inline call (PDF < 7 MB) ─────────────────────────────────────────────────
 async function callGeminiInline(pdfBuffer: Buffer, apiKey: string, model: string): Promise<ExtractionResult> {
   const t0 = Date.now()
   const res = await fetch(`${BASE}/models/${model}:generateContent?key=${apiKey}`, {
@@ -98,24 +144,26 @@ async function callGeminiInline(pdfBuffer: Buffer, apiKey: string, model: string
       }],
       generationConfig: {
         temperature: 0,
-        maxOutputTokens: 32768,
+        maxOutputTokens: MAX_OUTPUT_TOKENS,
         responseMimeType: 'application/json',
       },
     }),
+    signal: AbortSignal.timeout(50000),
   })
 
-  console.log(`[gemini] ${model} inline call: ${Date.now() - t0}ms (status=${res.status})`)
+  console.log(`[gemini] ${model} inline: ${Date.now() - t0}ms status=${res.status}`)
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
     const msg = err?.error?.message || `HTTP ${res.status}`
-    if (res.status === 429) throw new Error('AI service is busy. Wait a minute and try again.')
-    if (res.status === 400) throw new Error(`This PDF couldn't be read: ${msg}`)
-    throw new Error(`Extraction failed: ${msg}`)
+    if (res.status === 429) throw new Error(`RATE_LIMIT: ${msg}`)
+    if (res.status === 400) throw new Error(`This PDF couldn't be read by AI: ${msg}`)
+    throw new Error(`Extraction failed (${res.status}): ${msg}`)
   }
-  return parseResponse(await res.json())
+  return parseResponse(await res.json(), model)
 }
 
+// ─── File API call (PDF ≥ 7 MB) ───────────────────────────────────────────────
 async function uploadToFileAPI(pdfBuffer: Buffer, apiKey: string): Promise<string> {
   const initRes = await fetch(
     `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${apiKey}`,
@@ -131,9 +179,8 @@ async function uploadToFileAPI(pdfBuffer: Buffer, apiKey: string): Promise<strin
       body: JSON.stringify({ file: { display_name: 'statement.pdf' } }),
     }
   )
-
   const uploadUrl = initRes.headers.get('x-goog-upload-url')
-  if (!uploadUrl) throw new Error('Could not start file upload. Check your GEMINI_API_KEY.')
+  if (!uploadUrl) throw new Error('Could not start file upload — check GEMINI_API_KEY.')
 
   const uploadRes = await fetch(uploadUrl, {
     method: 'POST',
@@ -144,16 +191,14 @@ async function uploadToFileAPI(pdfBuffer: Buffer, apiKey: string): Promise<strin
     },
     body: new Uint8Array(pdfBuffer),
   })
-
   if (!uploadRes.ok) {
     const txt = await uploadRes.text()
     throw new Error(`File upload failed: ${uploadRes.status} — ${txt.slice(0, 200)}`)
   }
-
   const fileData = await uploadRes.json()
-  const fileUri = fileData?.file?.uri
-  if (!fileUri) throw new Error('No file URI returned from Gemini File API')
-  return fileUri
+  const uri = fileData?.file?.uri
+  if (!uri) throw new Error('No file URI from Gemini File API')
+  return uri
 }
 
 async function callGeminiFile(pdfBuffer: Buffer, apiKey: string, model: string): Promise<ExtractionResult> {
@@ -174,51 +219,113 @@ async function callGeminiFile(pdfBuffer: Buffer, apiKey: string, model: string):
       }],
       generationConfig: {
         temperature: 0,
-        maxOutputTokens: 32768,
+        maxOutputTokens: MAX_OUTPUT_TOKENS,
         responseMimeType: 'application/json',
       },
     }),
+    signal: AbortSignal.timeout(50000),
   })
 
-  console.log(`[gemini] ${model} file call: ${Date.now() - t0}ms (status=${res.status})`)
+  console.log(`[gemini] ${model} file: ${Date.now() - t0}ms status=${res.status}`)
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
     const msg = err?.error?.message || `HTTP ${res.status}`
-    if (res.status === 429) throw new Error('AI service is busy. Wait a minute and try again.')
-    if (res.status === 400) throw new Error(`This PDF couldn't be read: ${msg}`)
-    throw new Error(`Extraction failed: ${msg}`)
+    if (res.status === 429) throw new Error(`RATE_LIMIT: ${msg}`)
+    if (res.status === 400) throw new Error(`This PDF couldn't be read by AI: ${msg}`)
+    throw new Error(`Extraction failed (${res.status}): ${msg}`)
   }
-  return parseResponse(await res.json())
+  return parseResponse(await res.json(), model)
 }
 
+// ─── Main export ──────────────────────────────────────────────────────────────
 export async function extractFromPDF(pdfBuffer: Buffer): Promise<ExtractionResult> {
   const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey) {
-    throw new Error('GEMINI_API_KEY not set. Get a free key at https://aistudio.google.com/app/apikey')
-  }
+  if (!apiKey) throw new Error('GEMINI_API_KEY not set. Get a free key at https://aistudio.google.com/app/apikey')
 
   const useInline = pdfBuffer.length <= INLINE_THRESHOLD
-  const call = useInline ? callGeminiInline : callGeminiFile
+  const call = (model: string) => useInline
+    ? callGeminiInline(pdfBuffer, apiKey, model)
+    : callGeminiFile(pdfBuffer, apiKey, model)
 
-  // First try with the fast model
-  try {
-    const result = await call(pdfBuffer, apiKey, MODEL_FAST)
-    if (result.transactions.length > 0) return result
-    console.warn('[gemini] fast model returned 0 transactions, retrying with accurate model')
-  } catch (err: any) {
-    // Retry with the accurate model on extraction errors (not auth/rate-limit)
-    const msg = String(err?.message || '')
-    if (/busy|rate limit|quota/i.test(msg)) throw err
-    console.warn('[gemini] fast model failed:', msg, '— retrying with accurate model')
+  const models = [MODEL_FAST, MODEL_ACCURATE, MODEL_LEGACY]
+
+  for (let i = 0; i < models.length; i++) {
+    const model = models[i]
+    const isLast = i === models.length - 1
+
+    try {
+      // Retry RPM errors (not daily limits) with backoff
+      const result = await withRetry(() => call(model), /* retries= */ 1, /* delayMs= */ 20000)
+
+      if (result.transactions.length > 0) {
+        // Try to fix missing bank name via IFSC
+        if (!result.meta.bank_name && result.meta.ifsc) {
+          result.meta.bank_name = bankFromIfsc(result.meta.ifsc)
+        }
+        return result
+      }
+
+      console.warn(`[gemini] ${model} returned 0 transactions — trying next model`)
+
+    } catch (err: any) {
+      const msg = String(err?.message || '')
+      const isDaily = isDailyLimitError(msg)
+      const isRateLimit = /rate_limit|rate.?limit|quota|resource.?exhausted/i.test(msg)
+
+      if (isRateLimit) {
+        if (isLast) {
+          // All models exhausted
+          throw new Error(
+            isDaily
+              ? 'Daily AI limit reached. Please try again after midnight, or contact support if urgent.'
+              : 'AI service is temporarily at capacity. Please wait 1–2 minutes and try again.'
+          )
+        }
+        console.warn(`[gemini] ${model} ${isDaily ? 'daily limit' : 'rate limit'} — switching to ${models[i + 1]}`)
+        continue // try next model
+      }
+
+      // Non-rate-limit error — propagate immediately, no point trying other models
+      throw err
+    }
   }
 
-  // Fallback to the more accurate (but slower) model
-  return call(pdfBuffer, apiKey, MODEL_ACCURATE)
+  // All models tried, all returned 0 transactions
+  throw new Error(
+    'No transactions found in this PDF. Make sure it is a real bank statement (not an account summary or scanned image with poor quality).'
+  )
 }
 
-function parseResponse(data: any): ExtractionResult {
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? ''
+// ─── IFSC prefix → bank name lookup ──────────────────────────────────────────
+function bankFromIfsc(ifsc: string): string | null {
+  const prefix = (ifsc || '').toUpperCase().slice(0, 4)
+  const map: Record<string, string> = {
+    SBIN: 'State Bank of India', HDFC: 'HDFC Bank', ICIC: 'ICICI Bank',
+    UTIB: 'Axis Bank', KKBK: 'Kotak Mahindra Bank', PUNB: 'Punjab National Bank',
+    BARB: 'Bank of Baroda', CNRB: 'Canara Bank', UBIN: 'Union Bank of India',
+    BKID: 'Bank of India', CBIN: 'Central Bank of India', IDIB: 'Indian Bank',
+    IDFB: 'IDFC First Bank', INDB: 'IndusInd Bank', YESB: 'Yes Bank',
+    FDRL: 'Federal Bank', KARB: 'Karnataka Bank', SIBL: 'South Indian Bank',
+    RATN: 'RBL Bank', DCBL: 'DCB Bank', BDBL: 'Bandhan Bank',
+    AUBL: 'AU Small Finance Bank', UJVN: 'Ujjivan Small Finance Bank',
+    IBKL: 'IDBI Bank', MAHB: 'Bank of Maharashtra', UCBA: 'UCO Bank',
+    PSIB: 'Punjab & Sind Bank', IOBA: 'Indian Overseas Bank',
+  }
+  return map[prefix] ?? null
+}
+
+// ─── Response parser ──────────────────────────────────────────────────────────
+function parseResponse(data: any, model: string): ExtractionResult {
+  const candidate = data.candidates?.[0]
+  const finishReason = candidate?.finishReason
+
+  // Warn if output was cut off — likely maxOutputTokens hit
+  if (finishReason === 'MAX_TOKENS') {
+    console.warn(`[gemini] ${model} hit MAX_TOKENS — output may be truncated. Consider splitting large PDFs.`)
+  }
+
+  const text  = candidate?.content?.parts?.[0]?.text?.trim() ?? ''
   const clean = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
 
   const tryParse = (s: string): ExtractionResult | null => {
@@ -240,24 +347,39 @@ function parseResponse(data: any): ExtractionResult {
   const direct = tryParse(clean)
   if (direct) return direct
 
+  // Try to extract a JSON object or array from surrounding text
   const objMatch = clean.match(/\{[\s\S]*\}/)
-  if (objMatch) {
-    const parsed = tryParse(objMatch[0])
-    if (parsed) return parsed
-  }
+  if (objMatch) { const r = tryParse(objMatch[0]); if (r) return r }
 
   const arrMatch = clean.match(/\[[\s\S]*\]/)
-  if (arrMatch) {
-    const parsed = tryParse(arrMatch[0])
-    if (parsed) return parsed
+  if (arrMatch) { const r = tryParse(arrMatch[0]); if (r) return r }
+
+  // If JSON was truncated, try to salvage partial transactions
+  const partialMatch = clean.match(/(\[[\s\S]*)$/)
+  if (partialMatch) {
+    try {
+      // Close any incomplete JSON array
+      const partial = partialMatch[1]
+        .replace(/,\s*$/, '')   // remove trailing comma
+        .replace(/\{[^}]*$/, '') // remove incomplete last object
+        + ']'
+      const r = tryParse(`{"meta":{},"transactions":${partial}}`)
+      if (r && r.transactions.length > 0) {
+        console.warn(`[gemini] Salvaged ${r.transactions.length} transactions from truncated output`)
+        return r
+      }
+    } catch {}
   }
 
+  console.warn('[gemini] Could not parse response, returning empty result. Raw:', clean.slice(0, 300))
   return { meta: { ...EMPTY_META }, transactions: [] }
 }
 
+// ─── Merge + deduplicate results from multiple calls ─────────────────────────
 export function mergeAndClean(allResults: ExtractionResult[]): ExtractionResult {
   const seen = new Set<string>()
-  const transactions = allResults.flatMap(r => r.transactions)
+  const transactions = allResults
+    .flatMap(r => r.transactions)
     .filter(tx => {
       if (!tx?.date) return false
       const key = `${tx.date}|${tx.debit ?? ''}|${tx.credit ?? ''}|${(tx.description || '').slice(0, 30)}`
@@ -265,7 +387,7 @@ export function mergeAndClean(allResults: ExtractionResult[]): ExtractionResult 
       seen.add(key)
       return true
     })
-    .sort((a, b) => (a.date && b.date ? new Date(a.date).getTime() - new Date(b.date).getTime() : 0))
+    .sort((a, b) => a.date && b.date ? new Date(a.date).getTime() - new Date(b.date).getTime() : 0)
 
   const meta: StatementMeta = { ...EMPTY_META }
   for (const r of allResults) {
@@ -273,22 +395,29 @@ export function mergeAndClean(allResults: ExtractionResult[]): ExtractionResult 
       if ((meta as any)[k] == null && r.meta?.[k] != null) (meta as any)[k] = r.meta[k]
     }
   }
+
+  // Last-resort bank name from IFSC
+  if (!meta.bank_name && meta.ifsc) {
+    meta.bank_name = bankFromIfsc(meta.ifsc)
+  }
+
   return { meta, transactions }
 }
 
+// ─── Transaction type detector ────────────────────────────────────────────────
 export function detectTransactionType(desc: string): string {
   const d = (desc || '').toUpperCase()
-  if (d.includes('UPI')) return 'UPI'
-  if (d.includes('NEFT')) return 'NEFT'
-  if (d.includes('IMPS')) return 'IMPS'
-  if (d.includes('RTGS')) return 'RTGS'
+  if (d.includes('UPI'))                                       return 'UPI'
+  if (d.includes('NEFT'))                                      return 'NEFT'
+  if (d.includes('IMPS'))                                      return 'IMPS'
+  if (d.includes('RTGS'))                                      return 'RTGS'
   if (d.includes('ATM') || d.includes('CASH WDL') || d.includes('WITHDRAWAL')) return 'ATM/Cash'
-  if (d.includes('NACH') || d.includes('ECS')) return 'NACH/ECS'
+  if (d.includes('NACH') || d.includes('ECS'))                 return 'NACH/ECS'
   if (d.includes('CHEQUE') || d.includes('CHQ') || d.includes('CHK')) return 'Cheque'
   if (d.includes('INTEREST') || d.includes('INT.') || d.includes('INT ')) return 'Interest'
   if (d.includes('CHARGES') || d.includes('FEE') || d.includes('GST')) return 'Charges'
-  if (d.includes('SALARY') || d.includes('SAL/')) return 'Salary'
-  if (d.includes('REFUND')) return 'Refund'
-  if (d.includes('POS ') || d.includes('CARD')) return 'Card'
+  if (d.includes('SALARY') || d.includes('SAL/'))              return 'Salary'
+  if (d.includes('REFUND'))                                    return 'Refund'
+  if (d.includes('POS ') || d.includes('CARD'))                return 'Card'
   return 'Other'
 }
