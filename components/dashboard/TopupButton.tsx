@@ -16,13 +16,15 @@ export default function TopupButton({ variant = 'primary', label, onSuccess }: P
   const toast = useToast()
   const { refresh, profile } = useDashboard()
 
-  const isLSUser = profile?.payment_provider === 'lemonsqueezy'
+  // Legacy LS users (pre-Razorpay-International rollout) keep their old flow.
+  // Everyone else — including new international users — goes through Razorpay.
+  const isLegacyLSUser = profile?.payment_provider === 'lemonsqueezy'
 
   const buy = async () => {
     setLoading(true)
 
-    // ─── Lemon Squeezy top-up (international) ─────────────────────────
-    if (isLSUser) {
+    // ─── Legacy Lemon Squeezy top-up (existing LS subscribers only) ────
+    if (isLegacyLSUser) {
       try {
         const res = await fetch('/api/lemonsqueezy/subscribe', {
           method: 'POST',
@@ -35,7 +37,6 @@ export default function TopupButton({ variant = 'primary', label, onSuccess }: P
           setLoading(false)
           return
         }
-        // Redirect to LS checkout — they'll be sent back to /dashboard after payment
         window.location.href = data.url
       } catch {
         toast.error('Network error', 'Check your connection.')
@@ -44,7 +45,7 @@ export default function TopupButton({ variant = 'primary', label, onSuccess }: P
       return
     }
 
-    // ─── Razorpay top-up (India) ───────────────────────────────────────
+    // ─── Razorpay top-up (India + new international users) ─────────────
     let data: CheckoutResponse
     try {
       const res = await fetch('/api/razorpay/topup', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
@@ -83,7 +84,7 @@ export default function TopupButton({ variant = 'primary', label, onSuccess }: P
     }
   }
 
-  const priceLabel = isLSUser ? '$1.20' : '₹100'
+  const priceLabel = isLegacyLSUser ? '$1.20' : '₹100'
   const labelText = label || `Buy 60 pages — ${priceLabel}`
 
   if (variant === 'inline') {

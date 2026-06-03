@@ -181,37 +181,14 @@ export default function PricingPage() {
     }
   }
 
-  // ─── Lemon Squeezy checkout (International) ───────────────────────────────
-  const startLSCheckout = async (planKey: string) => {
-    setLoading(planKey)
-    try {
-      const res = await fetch('/api/lemonsqueezy/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: planKey }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        alert(data.error || 'Could not start checkout. Please try again.')
-        setLoading('')
-        return
-      }
-      // Redirect to Lemon Squeezy hosted checkout
-      window.location.href = data.url
-    } catch {
-      alert('Network error. Check your connection and try again.')
-      setLoading('')
-    }
-  }
-
+  // International users also pay via Razorpay (international cards enabled).
+  // We display USD prices for clarity but the actual charge is in INR — the
+  // user's bank handles currency conversion. This avoids maintaining two
+  // payment providers and two sets of plan IDs.
   const startCheckout = async (planKey: string | null) => {
     if (!planKey) return
     if (!user) { router.push(`/login?redirect=/pricing&plan=${planKey}`); return }
-    if (isIndia) {
-      await startRazorpayCheckout(planKey)
-    } else {
-      await startLSCheckout(planKey)
-    }
+    await startRazorpayCheckout(planKey)
   }
 
   const dayPass = () => startCheckout('day_pass')
@@ -248,11 +225,18 @@ export default function PricingPage() {
               {isIndia ? (
                 <>🇮🇳 India — Pay via <strong>Razorpay</strong> (UPI, Card, NetBanking) · <button onClick={() => setIsIndia(false)} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: 12, padding: 0, fontFamily: 'inherit' }}>Switch to $ USD</button></>
               ) : (
-                <>🌍 International — Pay via <strong>Lemon Squeezy</strong> (Card, PayPal, Apple/Google Pay) · <button onClick={() => setIsIndia(true)} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: 12, padding: 0, fontFamily: 'inherit' }}>Switch to ₹ INR</button></>
+                <>🌍 International — Pay by <strong>Card</strong> (Visa, Mastercard, Amex) · <button onClick={() => setIsIndia(true)} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: 12, padding: 0, fontFamily: 'inherit' }}>Switch to ₹ INR</button></>
               )}
             </div>
           )}
         </div>
+
+        {/* Currency-conversion note for international users */}
+        {!isIndia && !geoLoading && (
+          <div style={{ maxWidth: 540, margin: '-12px auto 22px', fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.5 }}>
+            Prices shown in USD for convenience. Billed in INR at today's interbank rate — your card issuer handles currency conversion (typical fee 0–2%).
+          </div>
+        )}
 
         {/* Billing cycle toggle */}
         <div style={{ display: 'inline-flex', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 4 }}>
@@ -355,9 +339,7 @@ export default function PricingPage() {
                       cursor: loading ? 'wait' : 'pointer', opacity: loading && loading !== t.planKey ? 0.5 : 1,
                       width: '100%',
                     }}>
-                    {loading === t.planKey
-                      ? (isIndia ? 'Opening Razorpay...' : 'Opening checkout...')
-                      : t.cta + ' →'}
+                    {loading === t.planKey ? 'Opening Razorpay…' : t.cta + ' →'}
                   </button>
                 )
               })()}
