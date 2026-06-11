@@ -36,8 +36,13 @@ export default function CommandPalette() {
         setOpen(false)
       }
     }
+    const onOpenEvent = () => setOpen(true)
     document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
+    window.addEventListener('bxl:open-palette', onOpenEvent)
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      window.removeEventListener('bxl:open-palette', onOpenEvent)
+    }
   }, [open])
 
   useEffect(() => {
