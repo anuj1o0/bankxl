@@ -197,17 +197,22 @@ export default function HistoryPage() {
         {/* Filters */}
         {!loading && conversions.length > 0 && (
           <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by filename or bank..."
-              style={{ flex: 1, minWidth: 220, padding: '11px 14px', background: 'var(--zebra)', border: '1px solid var(--border)', borderRadius: 9, color: 'var(--text)', fontFamily: 'Sora,sans-serif', fontSize: 13, outline: 'none' }} />
+            <div style={{ flex: 1, minWidth: 220, position: 'relative' }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" strokeWidth="1.8" strokeLinecap="round" style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
+                <circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by filename or bank..."
+                style={{ width: '100%', padding: '11px 14px 11px 38px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 11, color: 'var(--text)', fontFamily: 'Sora,sans-serif', fontSize: 13, outline: 'none', boxShadow: 'var(--shadow-sm)' }} />
+            </div>
             <select value={filter} onChange={e => setFilter(e.target.value as any)}
-              style={{ padding: '11px 14px', background: 'var(--zebra)', border: '1px solid var(--border)', borderRadius: 9, color: 'var(--text)', fontFamily: 'Sora,sans-serif', fontSize: 13, outline: 'none', cursor: 'pointer' }}>
+              style={{ padding: '11px 14px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 11, color: 'var(--text)', fontFamily: 'Sora,sans-serif', fontSize: 13, outline: 'none', cursor: 'pointer', boxShadow: 'var(--shadow-sm)' }}>
               <option value="all">All status</option>
               <option value="success">Success</option>
               <option value="processing">Processing</option>
               <option value="failed">Failed</option>
             </select>
             <select value={bankFilter} onChange={e => setBankFilter(e.target.value)}
-              style={{ padding: '11px 14px', background: 'var(--zebra)', border: '1px solid var(--border)', borderRadius: 9, color: 'var(--text)', fontFamily: 'Sora,sans-serif', fontSize: 13, outline: 'none', cursor: 'pointer' }}>
+              style={{ padding: '11px 14px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 11, color: 'var(--text)', fontFamily: 'Sora,sans-serif', fontSize: 13, outline: 'none', cursor: 'pointer', boxShadow: 'var(--shadow-sm)' }}>
               <option value="all">All banks</option>
               {banks.map(b => <option key={b} value={b}>{b}</option>)}
             </select>
@@ -216,9 +221,11 @@ export default function HistoryPage() {
 
         {/* Empty state */}
         {!loading && conversions.length === 0 && (
-          <div style={{ padding: 80, textAlign: 'center', background: 'var(--zebra)', border: '1px solid var(--border)', borderRadius: 14 }}>
-            <div style={{ fontSize: 56, marginBottom: 16, opacity: 0.7 }}>📋</div>
-            <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>No conversions yet</h3>
+          <div style={{ padding: 80, textAlign: 'center', background: 'var(--surface)', border: '1px dashed var(--border-strong)', borderRadius: 18 }}>
+            <div style={{ width: 64, height: 64, margin: '0 auto 18px', borderRadius: 18, background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" /></svg>
+            </div>
+            <h3 className="display" style={{ fontSize: 20, fontWeight: 700, marginBottom: 8, letterSpacing: '-0.02em' }}>No conversions yet</h3>
             <p style={{ fontSize: 14, color: 'var(--text-dim)', marginBottom: 24, maxWidth: 380, margin: '0 auto 24px', lineHeight: 1.6 }}>
               Once you convert a bank statement, the full record appears here — searchable, filterable, and re-downloadable in any format.
             </p>
@@ -230,8 +237,10 @@ export default function HistoryPage() {
 
         {/* No results */}
         {!loading && conversions.length > 0 && filtered.length === 0 && (
-          <div style={{ padding: 60, textAlign: 'center', background: 'var(--zebra)', border: '1px solid var(--border)', borderRadius: 14 }}>
-            <div style={{ fontSize: 36, marginBottom: 10, opacity: 0.4 }}>🔍</div>
+          <div style={{ padding: 60, textAlign: 'center', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 18 }}>
+            <div style={{ width: 48, height: 48, margin: '0 auto 14px', borderRadius: 14, background: 'var(--surface-2)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-faint)' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+            </div>
             <p style={{ fontSize: 14, color: 'var(--text-dim)', marginBottom: 12 }}>No conversions match your filters.</p>
             <button onClick={() => { setSearch(''); setFilter('all'); setBankFilter('all') }}
               style={{ padding: '8px 16px', background: 'var(--hover)', color: 'var(--text)', border: '1px solid var(--border-strong)', borderRadius: 8, fontSize: 12, cursor: 'pointer', fontFamily: 'Sora,sans-serif' }}>
@@ -242,7 +251,7 @@ export default function HistoryPage() {
 
         {/* List */}
         {!loading && filtered.length > 0 && (
-          <div style={{ background: 'var(--zebra)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'visible' }}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'visible', boxShadow: 'var(--shadow-sm)' }}>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
@@ -344,11 +353,9 @@ interface StatCardProps {
 }
 function StatCard({ label, value, sub, accent, color }: StatCardProps) {
   return (
-    <div style={{ padding: 16, background: 'var(--zebra)', border: '1px solid var(--border)', borderRadius: 11, transition: 'all 0.2s' }}
-      onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)'}
-      onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'}>
-      <div className="mono" style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: 1, marginBottom: 8 }}>{label}</div>
-      <div style={{ fontSize: 22, fontWeight: 600, color: color ?? (accent ? 'var(--accent)' : 'var(--text)'), letterSpacing: '-0.01em' }}>{value}</div>
+    <div className="card card-hover" style={{ padding: 16, borderRadius: 14 }}>
+      <div className="mono" style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: 1.5, marginBottom: 8 }}>{label}</div>
+      <div className="display" style={{ fontSize: 23, fontWeight: 700, color: color ?? (accent ? 'var(--accent)' : 'var(--text-strong)'), letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>{value}</div>
       {sub && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4, fontFamily: 'DM Mono, monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub}</div>}
     </div>
   )
