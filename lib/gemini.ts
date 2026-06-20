@@ -124,6 +124,43 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 2, delayMs = 20000):
   throw new Error('Gemini: max retries exceeded')
 }
 
+// ─── Transient network-error retry ───────────────────────────────────────────
+// Wraps fetch calls. Retries on ECONNRESET, fetch failed, network errors, 502/503/504
+// (not user-initiated aborts and not 4xx errors which are caller bugs).
+async function fetchWithRetry(url: string, init: RequestInit, label: string, retries = 2): Promise<Response> {
+  let lastErr: any
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url, init)
+      // Retry transient gateway errors
+      if (res.status === 502 || res.status === 503 || res.status === 504) {
+        if (attempt < retries) {
+          const wait = 800 * (attempt + 1)
+          console.warn(`[gemini] ${label} got ${res.status}, retrying in ${wait}ms…`)
+          await new Promise(r => setTimeout(r, wait))
+          continue
+        }
+      }
+      return res
+    } catch (err: any) {
+      lastErr = err
+      const msg = String(err?.message || err)
+      const isAbort = err?.name === 'AbortError' || /aborted|timeout/i.test(msg)
+      const isNetwork = /econnreset|enotfound|fetch failed|network|socket hang up/i.test(msg)
+      // Don't retry user-initiated aborts (AbortSignal.timeout firing)
+      if (isAbort) throw err
+      if (isNetwork && attempt < retries) {
+        const wait = 600 * (attempt + 1)
+        console.warn(`[gemini] ${label} network error (${msg.slice(0, 80)}), retrying in ${wait}ms…`)
+        await new Promise(r => setTimeout(r, wait))
+        continue
+      }
+      throw err
+    }
+  }
+  throw lastErr ?? new Error(`${label}: max retries exceeded`)
+}
+
 // ─── Detect if error is a daily (RPD) exhaustion ─────────────────────────────
 function isDailyLimitError(msg: string): boolean {
   return /daily.?limit|quota.?exceeded|resource.?exhausted|per.?day/i.test(msg)
@@ -132,7 +169,7 @@ function isDailyLimitError(msg: string): boolean {
 // ─── Inline call (PDF < 7 MB) ─────────────────────────────────────────────────
 async function callGeminiInline(pdfBuffer: Buffer, apiKey: string, model: string): Promise<ExtractionResult> {
   const t0 = Date.now()
-  const res = await fetch(`${BASE}/models/${model}:generateContent?key=${apiKey}`, {
+  const res = await fetchWithRetry(`${BASE}/models/${model}:generateContent?key=${apiKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -149,7 +186,7 @@ async function callGeminiInline(pdfBuffer: Buffer, apiKey: string, model: string
       },
     }),
     signal: AbortSignal.timeout(50000),
-  })
+  }, `${model} inline`)
 
   console.log(`[gemini] ${model} inline: ${Date.now() - t0}ms status=${res.status}`)
 
@@ -207,7 +244,7 @@ async function callGeminiFile(pdfBuffer: Buffer, apiKey: string, model: string):
   console.log(`[gemini] file upload: ${Date.now() - tUpload}ms`)
 
   const t0 = Date.now()
-  const res = await fetch(`${BASE}/models/${model}:generateContent?key=${apiKey}`, {
+  const res = await fetchWithRetry(`${BASE}/models/${model}:generateContent?key=${apiKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -224,7 +261,7 @@ async function callGeminiFile(pdfBuffer: Buffer, apiKey: string, model: string):
       },
     }),
     signal: AbortSignal.timeout(50000),
-  })
+  }, `${model} file`)
 
   console.log(`[gemini] ${model} file: ${Date.now() - t0}ms status=${res.status}`)
 
@@ -240,9 +277,15 @@ async function callGeminiFile(pdfBuffer: Buffer, apiKey: string, model: string):
 
 // ─── Split a PDF into N-page chunks ───────────────────────────────────────────
 // Returns an array of Buffers, each a valid PDF containing a slice of the input.
+// Uses ignoreEncryption so lightly-encrypted (but readable) PDFs still split.
 export async function splitPdfIntoChunks(pdfBuffer: Buffer, pagesPerChunk: number): Promise<Buffer[]> {
   const { PDFDocument } = await import('pdf-lib')
-  const src = await PDFDocument.load(pdfBuffer)
+  let src: any
+  try {
+    src = await PDFDocument.load(pdfBuffer, { ignoreEncryption: true })
+  } catch (e: any) {
+    throw new Error(`Could not split PDF for parallel processing: ${e?.message || e}`)
+  }
   const totalPages = src.getPageCount()
 
   if (totalPages <= pagesPerChunk) return [pdfBuffer]
@@ -290,27 +333,38 @@ export async function extractFromPDFChunked(
   )
   console.log(`[gemini] parallel pass: ${Date.now() - tPar}ms`)
 
+  // Treat "succeeded but 0 transactions" as a soft failure — bank statement
+  // pages almost always have at least one row, so empty result usually means
+  // the lite model misread layout. Retry these with the accurate path.
   const successes: ExtractionResult[] = []
-  const failedIndices: number[] = []
+  const needsRetry: number[] = []
   parallelResults.forEach((r, i) => {
-    if (r.status === 'fulfilled') {
-      successes.push(r.value)
-    } else {
-      failedIndices.push(i)
+    if (r.status === 'rejected') {
+      needsRetry.push(i)
       console.warn(`[gemini] parallel chunk ${i + 1} failed: ${String(r.reason?.message || r.reason).slice(0, 120)}`)
+    } else if (r.value.transactions.length === 0) {
+      needsRetry.push(i)
+      console.warn(`[gemini] parallel chunk ${i + 1} returned 0 transactions — will retry`)
+    } else {
+      successes.push(r.value)
     }
   })
 
-  // ─── Pass 2: sequential retry of failed chunks ─────────────────────────────
-  if (failedIndices.length > 0) {
-    console.log(`[gemini] retrying ${failedIndices.length} failed chunks sequentially…`)
+  // ─── Pass 2: sequential retry of failed + empty chunks ─────────────────────
+  if (needsRetry.length > 0) {
+    console.log(`[gemini] retrying ${needsRetry.length} chunk(s) sequentially…`)
     const tRetry = Date.now()
     const stillFailed: string[] = []
-    for (const i of failedIndices) {
+    for (const i of needsRetry) {
       try {
         const result = await extractFromPDF(chunks[i], /* skipRpmRetry */ false)
+        // Even an empty result on retry is "successful" — page may truly have nothing
         successes.push(result)
-        console.log(`[gemini] chunk ${i + 1} succeeded on sequential retry`)
+        if (result.transactions.length > 0) {
+          console.log(`[gemini] chunk ${i + 1} recovered ${result.transactions.length} transactions on retry`)
+        } else {
+          console.log(`[gemini] chunk ${i + 1} still empty on retry — accepting as truly empty page`)
+        }
       } catch (err: any) {
         const msg = String(err?.message || err).slice(0, 120)
         stillFailed.push(`chunk ${i + 1}: ${msg}`)
@@ -476,25 +530,58 @@ function parseResponse(data: any, model: string): ExtractionResult {
 }
 
 // ─── Merge + deduplicate results from multiple calls ─────────────────────────
+// Defensive pipeline:
+//   1. Normalize each result (parses dates/amounts, drops junk rows, fixes
+//      both-debit-and-credit-set mistakes — see lib/normalize.ts).
+//   2. Merge metas, preferring the first non-null value for each field.
+//   3. Dedup transactions using ref_no when present (highest signal) or
+//      a normalized composite key otherwise.
+//   4. Sort chronologically.
 export function mergeAndClean(allResults: ExtractionResult[]): ExtractionResult {
-  const seen = new Set<string>()
-  const transactions = allResults
-    .flatMap(r => r.transactions)
-    .filter(tx => {
-      if (!tx?.date) return false
-      const key = `${tx.date}|${tx.debit ?? ''}|${tx.credit ?? ''}|${(tx.description || '').slice(0, 30)}`
-      if (seen.has(key)) return false
-      seen.add(key)
-      return true
-    })
-    .sort((a, b) => a.date && b.date ? new Date(a.date).getTime() - new Date(b.date).getTime() : 0)
+  // Normalize first — this strips junk, parses amounts/dates, and drops
+  // duplicate "BROUGHT FORWARD"/"OPENING BALANCE" header rows.
+  const { normalizeExtraction } = require('./normalize') as typeof import('./normalize')
+  const normalized = allResults.map(normalizeExtraction)
 
+  // Merge metas (first non-null wins)
   const meta: StatementMeta = { ...EMPTY_META }
-  for (const r of allResults) {
+  for (const r of normalized) {
     for (const k of Object.keys(meta) as (keyof StatementMeta)[]) {
       if ((meta as any)[k] == null && r.meta?.[k] != null) (meta as any)[k] = r.meta[k]
     }
   }
+
+  // Dedup. Strategy:
+  //   - If both rows have the same ref_no AND same date → duplicate.
+  //   - Otherwise, key on date|debit|credit|first-40-chars-of-description.
+  //     We use the larger description prefix (40 vs old 30) because chunk
+  //     splits sometimes truncate descriptions slightly differently.
+  const seenRef = new Set<string>()
+  const seenKey = new Set<string>()
+  const transactions = normalized
+    .flatMap(r => r.transactions)
+    .filter(tx => {
+      if (!tx?.date) return false
+
+      // ref_no-based dedup (UPI ref, UTR, cheque number — globally unique)
+      if (tx.ref_no && tx.ref_no.length >= 6) {
+        const refKey = `${tx.date}|${tx.ref_no}`
+        if (seenRef.has(refKey)) return false
+        seenRef.add(refKey)
+      }
+
+      // Composite key dedup (catches rows without ref_no)
+      const descStem = (tx.description || '').toLowerCase().replace(/\s+/g, ' ').slice(0, 40)
+      const key = `${tx.date}|${tx.debit ?? '_'}|${tx.credit ?? '_'}|${descStem}`
+      if (seenKey.has(key)) return false
+      seenKey.add(key)
+      return true
+    })
+    .sort((a, b) => {
+      // Primary sort: date; secondary: keep original order within same date
+      const t = new Date(a.date).getTime() - new Date(b.date).getTime()
+      return t
+    })
 
   // Last-resort bank name from IFSC
   if (!meta.bank_name && meta.ifsc) {
