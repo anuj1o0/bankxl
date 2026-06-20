@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { generateExcel } from '@/lib/excel'
 import { extractFromPDF, extractFromPDFChunked, mergeAndClean, ExtractionResult } from '@/lib/gemini'
 import { toCSV, toJSON, toTallyXML, FORMAT_INFO, ExportFormat } from '@/lib/formats'
+import { validatePdf, PdfValidationError } from '@/lib/pdf-validation'
+import { bankNameFromFilename } from '@/lib/normalize'
 
 // Hobby plan caps at 60s; Pro plan supports up to 300s. With chunked
 // extraction (10 pages per chunk, parallel), even 50-page PDFs finish
@@ -253,12 +255,25 @@ export async function POST(req: NextRequest) {
 
   const fileBuffer = Buffer.from(await file.arrayBuffer())
 
-  // Step 1: get page count first (fast — 1-2s)
+  // Step 1: validate the PDF (magic bytes, encryption, page count). This
+  // catches password-protected, corrupt, and not-actually-PDF files with
+  // friendly error messages BEFORE we burn any Gemini calls.
   const tPages = Date.now()
-  const pageCount = await getPageCount(fileBuffer)
-  console.log(`[convert] pdf-parse: ${Date.now() - tPages}ms (${pageCount} pages, ${(file.size / 1024).toFixed(0)} KB)`)
-  if (pageCount < 1) {
-    return NextResponse.json({ error: 'Could not read PDF. Make sure the file is a valid, unlocked PDF.' }, { status: 400 })
+  let pageCount: number
+  try {
+    const info = await validatePdf(fileBuffer)
+    pageCount = info.pageCount
+    console.log(`[convert] validated: ${Date.now() - tPages}ms (${pageCount} pages, ${(file.size / 1024).toFixed(0)} KB${info.isEncrypted ? ', encrypted' : ''})`)
+  } catch (e: any) {
+    if (e instanceof PdfValidationError) {
+      console.warn(`[convert] PDF validation failed: ${e.userMessage} (${e.detail || '-'})`)
+      return NextResponse.json({ error: e.userMessage }, { status: 400 })
+    }
+    // Fallback to pdf-parse if pdf-lib bombs in some weird way
+    pageCount = await getPageCount(fileBuffer)
+    if (pageCount < 1) {
+      return NextResponse.json({ error: 'Could not read PDF. Make sure the file is a valid, unlocked PDF.' }, { status: 400 })
+    }
   }
 
   // Step 2: usage check using actual page count
@@ -321,6 +336,23 @@ export async function POST(req: NextRequest) {
   }
 
   const merged = mergeAndClean([extracted])
+
+  // Last-resort bank name from filename if AI + IFSC both failed.
+  if (!merged.meta.bank_name) {
+    const fromName = bankNameFromFilename(file.name)
+    if (fromName) {
+      merged.meta.bank_name = fromName
+      console.log(`[convert] bank name resolved from filename: ${fromName}`)
+    }
+  }
+
+  // Sanity check: low transaction density usually means we missed something.
+  // Log it (don't fail) so we can monitor extraction quality across users.
+  const txPerPage = merged.transactions.length / Math.max(pageCount, 1)
+  if (txPerPage < 1 && pageCount >= 2) {
+    console.warn(`[convert] LOW DENSITY WARNING: ${merged.transactions.length} tx across ${pageCount} pages (${txPerPage.toFixed(2)}/page) — may have missed rows`)
+  }
+
   const brandName = brandFromForm || usage.brandName
 
   let outputBuffer: Buffer
