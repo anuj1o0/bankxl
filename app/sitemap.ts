@@ -1,5 +1,6 @@
 ﻿import type { MetadataRoute } from 'next'
 import { ALL_BANK_SLUGS } from './banks/[bank]/data'
+import { ALL_CONVERT_SLUGS } from './convert/[format]/data'
 import { resolveSiteUrl } from '@/lib/site-url'
 
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -20,6 +21,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: '/refund',      priority: 0.4, changeFrequency: 'yearly'  as const },
   ]
 
+  // Format-specific converter landing pages — target the biggest search-volume
+  // keywords in the SEO strategy (bank-statement-to-excel = 2,400 mo, etc.)
+  const convertPages = ALL_CONVERT_SLUGS.map(slug => ({
+    path: `/convert/${slug}`,
+    priority: 0.9,
+    changeFrequency: 'monthly' as const,
+  }))
+
   // Individual bank landing pages — high SEO value
   const bankPages = ALL_BANK_SLUGS.map(slug => ({
     path: `/banks/${slug}`,
@@ -27,7 +36,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     changeFrequency: 'monthly' as const,
   }))
 
-  return [...staticPages, ...bankPages].map(p => ({
+  return [...staticPages, ...convertPages, ...bankPages].map(p => ({
     url: `${base}${p.path}`,
     lastModified: now,
     changeFrequency: p.changeFrequency,
