@@ -3,7 +3,7 @@ import Nav from '@/components/Nav'
 import Footer from '@/components/Footer'
 
 export const metadata = {
-  title: 'API Documentation — BankXL',
+  title: 'API Documentation',
   description: 'Convert bank statement PDFs to structured JSON, Excel, CSV or Tally XML using the BankXL REST API.',
 }
 
