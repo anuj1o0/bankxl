@@ -12,11 +12,18 @@ export default function Footer() {
       ]
     },
     {
-      title: 'Popular guides', links: [
-        ['SBI statement to Excel', '/banks/sbi'],
-        ['HDFC statement to Excel', '/banks/hdfc'],
-        ['ICICI statement to Excel', '/banks/icici'],
-        ['Axis statement to Excel', '/banks/axis'],
+      title: 'Convert to…', links: [
+        ['Excel (.xlsx)', '/convert/bank-statement-to-excel'],
+        ['Tally XML', '/convert/bank-statement-to-tally'],
+        ['CSV', '/convert/bank-statement-to-csv'],
+        ['JSON', '/convert/bank-statement-to-json'],
+      ]
+    },
+    {
+      title: 'For', links: [
+        ['Chartered Accountants', '/for/chartered-accountants'],
+        ['Blog & guides', '/blog'],
+        ['BankXL vs Nanonets', '/compare/bankxl-vs-nanonets'],
       ]
     },
     {

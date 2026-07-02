@@ -232,6 +232,96 @@ export const BANK_PAGES: Record<string, BankPageData> = {
       { q: 'Can I use BankXL for Federal Bank NRI statements?', a: 'Yes. Federal Bank NRE and NRO account statements are fully supported.' },
     ],
   },
+
+  'bank-of-india': {
+    slug: 'bank-of-india',
+    name: 'Bank of India',
+    shortName: 'BOI',
+    tagline: 'Convert Bank of India statement PDF to Excel instantly',
+    metaDescription: 'Convert your Bank of India (BOI) statement PDF to Excel, CSV or Tally XML in 15 seconds. Works with BOI Mobile, StarConnect internet banking and passbook PDFs. Free to try.',
+    keywords: ['bank of india statement to excel', 'boi statement pdf to excel', 'convert bank of india statement', 'starconnect statement excel', 'boi passbook to excel'],
+    color: '#f78d1e',
+    statementFeatures: ['BOI Mobile app statements', 'StarConnect internet banking statements', 'BOI passbook PDFs', 'BOI current & savings account statements', 'Password-protected BOI PDFs (after unlock)'],
+    steps: ['Download your BOI statement from StarConnect or BOI Mobile', 'Upload the PDF to BankXL', 'Get your Excel in 15 seconds'],
+    formats: ['Excel (.xlsx) with color-coded debits/credits', 'CSV for accounting software', 'JSON for developers', 'Tally XML for direct import'],
+    faqs: [
+      { q: 'How do I download my BOI statement?', a: 'Log into StarConnect internet banking → Accounts → Statement → select period → Download PDF. Or use the BOI Mobile app → Statement → Email/Download.' },
+      { q: 'Does BankXL work with password-protected BOI statements?', a: 'Yes, after removing the password. Open the PDF in Adobe Reader → File → Print → Save as PDF to create an unlocked copy.' },
+      { q: 'Is BankXL good for BOI Tally import?', a: 'Yes — export your BOI statement as Tally XML and use Ctrl+I in Tally Prime / ERP 9 to import receipts and payments as vouchers.' },
+    ],
+  },
+
+  'union-bank': {
+    slug: 'union-bank',
+    name: 'Union Bank of India',
+    shortName: 'Union Bank',
+    tagline: 'Convert Union Bank of India statement PDF to Excel instantly',
+    metaDescription: 'Convert your Union Bank of India statement PDF to Excel, CSV or Tally XML in 15 seconds. Works with Union Bank internet banking and passbook PDFs. Free to try.',
+    keywords: ['union bank statement to excel', 'union bank of india pdf to excel', 'convert union bank statement', 'union bank internet banking statement excel'],
+    color: '#c8102e',
+    statementFeatures: ['Union Bank Vyom app statements', 'Union Bank internet banking statements', 'Union Bank passbook PDFs', 'Union Bank NRI statements', 'Post-merger e-Andhra & e-Corporation account formats'],
+    steps: ['Download your Union Bank statement from internet banking or Vyom app', 'Upload the PDF to BankXL', 'Get your Excel in 15 seconds'],
+    formats: ['Excel (.xlsx) with color-coded debits/credits', 'CSV for accounting software', 'JSON for developers', 'Tally XML for direct import'],
+    faqs: [
+      { q: 'How do I download my Union Bank statement?', a: 'Log into Union Bank internet banking → Accounts → Statement → select period → Download PDF. Or use the Vyom app → Statement → Download.' },
+      { q: 'Does BankXL support post-merger Union Bank formats?', a: 'Yes. Statements from ex-Andhra Bank and ex-Corporation Bank accounts (now under Union Bank of India after the 2020 merger) work fine.' },
+      { q: 'Can I convert Union Bank statements for Tally import?', a: 'Yes — export as Tally XML and use Ctrl+I in Tally Prime / ERP 9. Receipts and payments land as proper vouchers.' },
+    ],
+  },
+
+  'indian-bank': {
+    slug: 'indian-bank',
+    name: 'Indian Bank',
+    shortName: 'Indian Bank',
+    tagline: 'Convert Indian Bank statement PDF to Excel instantly',
+    metaDescription: 'Convert your Indian Bank statement PDF to Excel, CSV or Tally XML in 15 seconds. Works with IndOASIS app, internet banking and passbook PDFs. Free to try.',
+    keywords: ['indian bank statement to excel', 'indian bank pdf to excel', 'convert indian bank statement', 'indoasis statement excel', 'indian bank passbook to excel'],
+    color: '#0b3b8f',
+    statementFeatures: ['IndOASIS mobile app statements', 'Indian Bank internet banking statements', 'Indian Bank passbook PDFs', 'Indian Bank NRI account statements', 'Post-merger ex-Allahabad Bank account formats'],
+    steps: ['Download your Indian Bank statement from IndOASIS or internet banking', 'Upload the PDF to BankXL', 'Get your Excel in 15 seconds'],
+    formats: ['Excel (.xlsx) with color-coded debits/credits', 'CSV for accounting software', 'JSON for developers', 'Tally XML for direct import'],
+    faqs: [
+      { q: 'How do I download my Indian Bank statement?', a: 'Use IndOASIS mobile app → Accounts → Statement → Download PDF. Or Indian Bank internet banking → Accounts → e-Statement → select period.' },
+      { q: 'Does BankXL work with ex-Allahabad Bank statements?', a: 'Yes. After the 2020 merger, ex-Allahabad Bank accounts are now under Indian Bank — their statement format is fully supported.' },
+      { q: 'Can I use this for Indian Bank Tally import?', a: 'Yes — Tally XML export lets you import all transactions as proper vouchers into Tally Prime or ERP 9.' },
+    ],
+  },
+
+  rbl: {
+    slug: 'rbl',
+    name: 'RBL Bank',
+    shortName: 'RBL',
+    tagline: 'Convert RBL Bank statement PDF to Excel instantly',
+    metaDescription: 'Convert your RBL Bank statement PDF to Excel, CSV or Tally XML in 15 seconds. Works with RBL MyBank app, internet banking and credit card statements. Free to try.',
+    keywords: ['rbl bank statement to excel', 'rbl pdf to excel', 'convert rbl bank statement', 'rbl mybank statement excel', 'rbl credit card statement to excel'],
+    color: '#c8102e',
+    statementFeatures: ['RBL MyBank app statements', 'RBL Bank internet banking statements', 'RBL credit card statements', 'RBL savings & current account statements', 'RBL business banking statements'],
+    steps: ['Download your RBL statement from MyBank app or internet banking', 'Upload the PDF to BankXL', 'Get your Excel in 15 seconds'],
+    formats: ['Excel (.xlsx) with color-coded debits/credits', 'CSV for accounting software', 'JSON for developers', 'Tally XML for direct import'],
+    faqs: [
+      { q: 'How do I download my RBL Bank statement?', a: 'Use the RBL MyBank app → Accounts → e-Statement → Download PDF. Or RBL internet banking → Accounts → Statement → select period → Download.' },
+      { q: 'Does BankXL work with RBL credit card statements?', a: 'Yes. RBL credit card PDFs convert cleanly with all transaction details preserved.' },
+      { q: 'Can I convert RBL statements for Tally import?', a: 'Yes — Tally XML export lets you import transactions as vouchers directly into Tally Prime or ERP 9.' },
+    ],
+  },
+
+  'au-sfb': {
+    slug: 'au-sfb',
+    name: 'AU Small Finance Bank',
+    shortName: 'AU SFB',
+    tagline: 'Convert AU Small Finance Bank statement PDF to Excel instantly',
+    metaDescription: 'Convert your AU Small Finance Bank statement PDF to Excel, CSV or Tally XML in 15 seconds. Works with AU 0101 app, AU Wingman internet banking and account PDFs. Free to try.',
+    keywords: ['au bank statement to excel', 'au small finance bank pdf to excel', 'au sfb statement converter', 'au 0101 statement excel', 'convert au bank statement'],
+    color: '#8b1c62',
+    statementFeatures: ['AU 0101 mobile app statements', 'AU Wingman internet banking statements', 'AU SFB savings & current account statements', 'AU SFB business banking statements', 'AU credit card statements'],
+    steps: ['Download your AU SFB statement from AU 0101 or Wingman', 'Upload the PDF to BankXL', 'Get your Excel in 15 seconds'],
+    formats: ['Excel (.xlsx) with color-coded debits/credits', 'CSV for accounting software', 'JSON for developers', 'Tally XML for direct import'],
+    faqs: [
+      { q: 'How do I download my AU SFB statement?', a: 'Use AU 0101 mobile app → Accounts → Statement → Download. Or AU Wingman internet banking → Accounts → Account Statement → select period → Download PDF.' },
+      { q: 'Does BankXL work with AU credit card statements?', a: 'Yes. AU Bank credit card PDFs are supported alongside their savings, current and business account statements.' },
+      { q: 'Can I convert AU SFB statements for Tally import?', a: 'Yes — export as Tally XML for direct Ctrl+I import into Tally Prime or ERP 9.' },
+    ],
+  },
 }
 
 export const ALL_BANK_SLUGS = Object.keys(BANK_PAGES)

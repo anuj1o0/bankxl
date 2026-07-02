@@ -180,6 +180,14 @@ export default function BankPage({ params }: Props) {
               )
             })}
           </div>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 20, fontSize: 13 }}>
+            <span style={{ color: 'var(--text-muted)' }}>Deep-dive by format:</span>
+            <Link href="/convert/bank-statement-to-excel" style={{ color: 'var(--accent)', textDecoration: 'none' }}>{data.shortName} → Excel guide</Link>
+            <span style={{ color: 'var(--text-faint)' }}>·</span>
+            <Link href="/convert/bank-statement-to-tally" style={{ color: 'var(--accent)', textDecoration: 'none' }}>{data.shortName} → Tally XML</Link>
+            <span style={{ color: 'var(--text-faint)' }}>·</span>
+            <Link href="/convert/bank-statement-to-csv" style={{ color: 'var(--accent)', textDecoration: 'none' }}>{data.shortName} → CSV</Link>
+          </div>
         </section>
 
         {/* FAQ */}
