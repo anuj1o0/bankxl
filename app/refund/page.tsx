@@ -1,7 +1,7 @@
 ﻿import LegalPage from '@/components/LegalPage'
 
 export const metadata = {
-  title: 'Refund Policy — BankXL',
+  title: 'Refund Policy',
   description: 'BankXL refund and cancellation policy.',
 }
 

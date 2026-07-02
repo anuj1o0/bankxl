@@ -9,8 +9,8 @@ import type { ReactNode } from 'react'
  *
  * Roadmap (SEO strategy §5, monthly volumes):
  *   ✅ how-to-import-bank-statement-in-tally-prime (2,900 mo, KD 12)
- *   [ ] best-bank-statement-converters-2026        (390 mo,   KD 22)
- *   [ ] how-to-convert-bank-statement-to-excel     (3,600 mo, KD 40)
+ *   ✅ best-bank-statement-converters-2026        (390 mo,   KD 22)
+ *   ✅ how-to-convert-bank-statement-to-excel     (3,600 mo, KD 40)
  *   [ ] convert-password-protected-bank-statement  (170 mo,   KD 12)
  */
 
@@ -123,7 +123,7 @@ export const BLOG_POSTS: Record<string, BlogPost> = {
       href: '/convert/bank-statement-to-tally',
       label: 'Try the Tally XML converter',
     },
-    relatedSlugs: ['best-bank-statement-converters-2026'],
+    relatedSlugs: ['best-bank-statement-converters-2026', 'how-to-convert-bank-statement-to-excel'],
     body: () => (
       <>
         <P>
@@ -348,7 +348,7 @@ export const BLOG_POSTS: Record<string, BlogPost> = {
       href: '/#converter',
       label: 'Try BankXL free',
     },
-    relatedSlugs: ['how-to-import-bank-statement-in-tally-prime'],
+    relatedSlugs: ['how-to-import-bank-statement-in-tally-prime', 'how-to-convert-bank-statement-to-excel'],
     body: () => (
       <>
         <P>
@@ -584,6 +584,171 @@ export const BLOG_POSTS: Record<string, BlogPost> = {
         <P style={{ marginTop: 40, fontSize: 14, color: 'var(--text-muted)', borderTop: '1px solid var(--border)', paddingTop: 24 }}>
           Missing a tool from this list? Reply and we'll test it — we'll add it if it holds up.
           Email <A href="mailto:support@banlxlai.com">support@banlxlai.com</A>.
+        </P>
+      </>
+    ),
+  },
+
+  'how-to-convert-bank-statement-to-excel': {
+    slug: 'how-to-convert-bank-statement-to-excel',
+    title: 'How to Convert Bank Statement PDF to Excel (Step-by-Step, 2026)',
+    h1: 'How to convert a bank statement PDF to Excel',
+    metaDescription: 'Three ways to convert a bank statement PDF to Excel — automatic converter, manual copy-paste, and Adobe export — with pros, cons and which to use for accounting work.',
+    keywords: [
+      'how to convert bank statement to excel', 'convert bank statement pdf to excel',
+      'bank statement pdf to excel converter', 'bank statement to excel',
+      'convert bank statement pdf to excel free', 'pdf to excel bank statement',
+    ],
+    category: 'guides',
+    publishedISO: '2026-07-02',
+    updatedISO: '2026-07-02',
+    readMinutes: 7,
+    author: { name: 'BankXL Team', role: 'Product & Accounting' },
+    excerpt: 'The three real ways to get a bank statement PDF into Excel — an automatic converter, manual copy-paste, and Adobe export — with the actual time cost of each and which one to use for accounting work.',
+    tocItems: [
+      { id: 'why-hard',        label: 'Why bank statement PDFs are hard to convert' },
+      { id: 'method-1',        label: 'Method 1 — automatic converter (fastest)' },
+      { id: 'method-2',        label: 'Method 2 — copy-paste into Excel (manual)' },
+      { id: 'method-3',        label: 'Method 3 — Adobe Acrobat export' },
+      { id: 'which-to-use',    label: 'Which method should you use?' },
+      { id: 'scanned-pdfs',    label: 'What about scanned or photographed statements?' },
+      { id: 'password-pdfs',   label: 'What if the PDF is password-protected?' },
+      { id: 'after-convert',   label: 'After converting: cleaning up the data' },
+    ],
+    cta: {
+      title: 'Convert your bank statement now',
+      desc: 'Upload a PDF and get a formatted Excel file in 15 seconds — debit/credit split, running balance, junk rows removed automatically.',
+      href: '/convert/bank-statement-to-excel',
+      label: 'Try the Excel converter',
+    },
+    relatedSlugs: ['how-to-import-bank-statement-in-tally-prime', 'best-bank-statement-converters-2026'],
+    body: () => (
+      <>
+        <P>
+          Every bank statement PDF has the same problem: it looks like a table, but it isn't one. It's text
+          and lines positioned to look tabular, which is why pasting it straight into Excel usually gives
+          you one long jumbled column instead of clean rows. Here are the three ways people actually solve
+          this, in order of how much time they take.
+        </P>
+
+        <H2 id="why-hard">Why bank statement PDFs are hard to convert</H2>
+        <P>
+          A PDF doesn't store a "table" the way Excel does — it stores individual pieces of text at specific
+          x/y coordinates on a page. Generic conversion tools try to reconstruct rows and columns from those
+          coordinates, which works reasonably for simple invoices but breaks down on bank statements because
+          of multi-line narrations, running balance columns, page breaks mid-statement, and inconsistent
+          spacing between different banks' PDF generators.
+        </P>
+        <P>
+          That's the difference between a <Strong>generic</Strong> PDF-to-Excel tool and one built
+          specifically for bank statements — the latter knows what a debit column, credit column, and
+          running balance look like for a given bank, so it doesn't just guess from coordinates.
+        </P>
+
+        <H2 id="method-1">Method 1 — Automatic converter (fastest, ~15 seconds)</H2>
+        <P>
+          This is the method most accountants and CAs settle on once they've tried the alternatives once.
+        </P>
+        <Step n={1} title="Upload the PDF">
+          <P>
+            Go to <A href="/convert/bank-statement-to-excel">BankXL's converter</A> and drop in your
+            statement PDF. No sign-up needed to see a preview.
+          </P>
+        </Step>
+        <Step n={2} title="Let it detect the bank and extract transactions">
+          <P>
+            The tool identifies the issuing bank from the PDF layout and extracts every transaction —
+            date, narration, debit, credit, running balance, and reference number where available.
+          </P>
+        </Step>
+        <Step n={3} title="Download the Excel file">
+          <P>
+            You get a formatted .xlsx with debit and credit in separate color-coded columns, a summary
+            sheet, and junk rows ("BROUGHT FORWARD", "OPENING BALANCE") already removed.
+          </P>
+        </Step>
+        <Callout title="Why this beats generic PDF tools" tone="tip">
+          Generic PDF-to-Excel tools give you a raw table dump — debit and credit often merge into one
+          column, and you spend 30-45 minutes per statement fixing formatting. A bank-statement-specific
+          converter does that cleanup automatically because it understands the structure of a bank
+          statement, not just the visual layout of a PDF page.
+        </Callout>
+
+        <H2 id="method-2">Method 2 — Copy-paste into Excel (manual, 30-90 minutes)</H2>
+        <P>
+          Works in a pinch for a one-page statement. Open the PDF, select the transaction table, copy, and
+          paste into Excel — then use <Strong>Data → Text to Columns</Strong> to split the pasted block
+          into separate fields.
+        </P>
+        <ul style={{ fontSize: 16, lineHeight: 1.75, color: 'var(--text-dim)', paddingLeft: 22 }}>
+          <li>Works reasonably for 1-2 page statements with a simple layout</li>
+          <li>Breaks down fast on multi-page statements — page headers/footers get pasted inline with data</li>
+          <li>Debit and credit almost always need manual re-splitting into separate columns</li>
+          <li>Running balance column often merges with the credit or debit column</li>
+          <li>No automatic detection of junk rows — you delete them by hand</li>
+        </ul>
+        <P>
+          For a 12-month, 20-page statement, this method routinely takes over an hour and still needs a
+          careful review afterward to catch spacing/merge errors.
+        </P>
+
+        <H2 id="method-3">Method 3 — Adobe Acrobat "Export PDF" (10-20 minutes, needs a subscription)</H2>
+        <P>
+          If you already have Adobe Acrobat Pro, <Strong>File → Export To → Spreadsheet → Microsoft Excel
+          Workbook</Strong> gives a better attempt than copy-paste, since Acrobat tries to reconstruct table
+          structure automatically.
+        </P>
+        <ul style={{ fontSize: 16, lineHeight: 1.75, color: 'var(--text-dim)', paddingLeft: 22 }}>
+          <li>Better than copy-paste for column alignment</li>
+          <li>Still doesn't know it's a "bank statement" — no debit/credit logic, no junk-row removal</li>
+          <li>Requires an Acrobat Pro subscription (Standard doesn't include this export)</li>
+          <li>Multi-page statements sometimes split into multiple sheets that need manual merging</li>
+        </ul>
+
+        <H2 id="which-to-use">Which method should you use?</H2>
+        <P>
+          If you convert bank statements more than once — for client work, reconciliation, loan review, or
+          your own bookkeeping — an automatic bank-statement converter pays for itself within the first
+          file, purely on time saved. Copy-paste and Adobe export are reasonable fallbacks for a genuine
+          one-off, single-page statement where setting up an account feels like overkill.
+        </P>
+
+        <H2 id="scanned-pdfs">What about scanned or photographed statements?</H2>
+        <P>
+          Old passbook scans or phone photos of a statement have no underlying text layer, so copy-paste
+          gives you nothing and Adobe's export often fails outright. You need OCR (optical character
+          recognition) first. BankXL runs OCR automatically when it detects an image-based PDF, so scanned
+          statements go through the same upload flow as digital ones — accuracy is typically 95%+ for a
+          clear scan.
+        </P>
+
+        <H2 id="password-pdfs">What if the PDF is password-protected?</H2>
+        <P>
+          Most Indian bank e-statements are password-locked (often your date of birth or PAN). Open the PDF
+          once with the password in any PDF viewer, then <Strong>File → Print → Save as PDF</Strong> to
+          create an unlocked copy. Convert that copy — the original with the password works too on BankXL
+          since you enter the password once during upload.
+        </P>
+
+        <H2 id="after-convert">After converting: cleaning up the data</H2>
+        <P>
+          Whichever method you use, do a quick sanity check before relying on the output for anything
+          financial:
+        </P>
+        <ul style={{ fontSize: 16, lineHeight: 1.75, color: 'var(--text-dim)', paddingLeft: 22 }}>
+          <li>Compare the transaction count in Excel against the count on the statement's last page</li>
+          <li>Spot-check 3-4 transactions against the original PDF for amount and date accuracy</li>
+          <li>Confirm the closing balance in Excel matches the closing balance printed on the statement</li>
+        </ul>
+        <P>
+          If you need the data in Tally instead of Excel, see our{' '}
+          <A href="/blog/how-to-import-bank-statement-in-tally-prime">guide to importing bank statements into Tally Prime</A>{' '}
+          — same source PDF, different export format.
+        </P>
+
+        <P style={{ marginTop: 40, fontSize: 14, color: 'var(--text-muted)', borderTop: '1px solid var(--border)', paddingTop: 24 }}>
+          Questions about a specific bank's PDF format? Email{' '}
+          <A href="mailto:support@banlxlai.com">support@banlxlai.com</A> and we'll help you sort it out.
         </P>
       </>
     ),

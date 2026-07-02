@@ -1,7 +1,7 @@
 ﻿import LegalPage from '@/components/LegalPage'
 
 export const metadata = {
-  title: 'Privacy Policy — BankXL',
+  title: 'Privacy Policy',
   description: 'How BankXL handles your data, files, and personal information.',
 }
 

@@ -3,7 +3,7 @@ import Nav from '@/components/Nav'
 import Footer from '@/components/Footer'
 
 export const metadata = {
-  title: 'Contact — BankXL',
+  title: 'Contact',
   description: 'Get in touch with the BankXL team.',
 }
 

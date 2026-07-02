@@ -23,7 +23,7 @@ export function generateMetadata({ params }: Props): Metadata {
   const ogSub = encodeURIComponent(`Free converter — no manual entry needed`)
 
   return {
-    title: `${data.name} Statement PDF to Excel Converter — Free | BankXL`,
+    title: `${data.name} Statement PDF to Excel Converter — Free`,
     description: data.metaDescription,
     keywords: data.keywords,
     alternates: { canonical: `/banks/${params.bank}` },

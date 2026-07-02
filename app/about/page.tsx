@@ -3,7 +3,7 @@ import Nav from '@/components/Nav'
 import Footer from '@/components/Footer'
 
 export const metadata = {
-  title: 'About — BankXL',
+  title: 'About',
   description: 'Why we built BankXL — a faster, cheaper bank statement converter for Indian accountants.',
 }
 

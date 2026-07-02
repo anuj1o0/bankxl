@@ -1,7 +1,7 @@
 ﻿import LegalPage from '@/components/LegalPage'
 
 export const metadata = {
-  title: 'Terms of Service — BankXL',
+  title: 'Terms of Service',
   description: 'Terms of Service governing your use of BankXL.',
 }
 

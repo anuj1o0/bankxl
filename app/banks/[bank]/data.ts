@@ -322,6 +322,96 @@ export const BANK_PAGES: Record<string, BankPageData> = {
       { q: 'Can I convert AU SFB statements for Tally import?', a: 'Yes — export as Tally XML for direct Ctrl+I import into Tally Prime or ERP 9.' },
     ],
   },
+
+  bandhan: {
+    slug: 'bandhan',
+    name: 'Bandhan Bank',
+    shortName: 'Bandhan',
+    tagline: 'Convert Bandhan Bank statement PDF to Excel instantly',
+    metaDescription: 'Convert your Bandhan Bank statement PDF to Excel, CSV or Tally XML in 15 seconds. Works with Bandhan mobile banking and internet banking statements. Free to try.',
+    keywords: ['bandhan bank statement to excel', 'bandhan bank pdf to excel', 'convert bandhan bank statement', 'bandhan bank statement converter'],
+    color: '#a91d4c',
+    statementFeatures: ['Bandhan mobile banking statements', 'Bandhan internet banking statements', 'Bandhan savings & current account statements', 'Bandhan microfinance loan statements'],
+    steps: ['Download your Bandhan Bank statement from mobile or internet banking', 'Upload the PDF to BankXL', 'Get your Excel in 15 seconds'],
+    formats: ['Excel (.xlsx) with color-coded debits/credits', 'CSV for accounting software', 'JSON for developers', 'Tally XML for direct import'],
+    faqs: [
+      { q: 'How do I download my Bandhan Bank statement?', a: 'Use the Bandhan mobile banking app → Accounts → e-Statement → Download PDF. Or internet banking → Accounts → Statement → select period → Download.' },
+      { q: 'Does BankXL work with all Bandhan account types?', a: 'Yes — savings, current, and microfinance loan account statements are all supported.' },
+      { q: 'Can I convert Bandhan statements for Tally import?', a: 'Yes — Tally XML export lets you import transactions as vouchers directly into Tally Prime or ERP 9.' },
+    ],
+  },
+
+  'south-indian-bank': {
+    slug: 'south-indian-bank',
+    name: 'South Indian Bank',
+    shortName: 'SIB',
+    tagline: 'Convert South Indian Bank statement PDF to Excel instantly',
+    metaDescription: 'Convert your South Indian Bank statement PDF to Excel, CSV or Tally XML in 15 seconds. Works with SIB Mirror+ app and internet banking statements. Free to try.',
+    keywords: ['south indian bank statement to excel', 'sib pdf to excel', 'convert south indian bank statement', 'sib mirror statement excel'],
+    color: '#004b87',
+    statementFeatures: ['SIB Mirror+ mobile app statements', 'South Indian Bank internet banking statements', 'SIB savings & current account statements', 'SIB NRI account statements'],
+    steps: ['Download your South Indian Bank statement from Mirror+ app or internet banking', 'Upload the PDF to BankXL', 'Get your Excel in 15 seconds'],
+    formats: ['Excel (.xlsx) with color-coded debits/credits', 'CSV for accounting software', 'JSON for developers', 'Tally XML for direct import'],
+    faqs: [
+      { q: 'How do I download my South Indian Bank statement?', a: 'Use SIB Mirror+ app → Accounts → e-Statement → Download. Or internet banking → Accounts → Statement → select period → Download PDF.' },
+      { q: 'Does BankXL work with SIB NRI account statements?', a: 'Yes. NRI, NRE and NRO account statements are supported alongside regular savings and current accounts.' },
+      { q: 'Can I convert South Indian Bank statements for Tally import?', a: 'Yes — export as Tally XML for direct Ctrl+I import into Tally Prime or ERP 9.' },
+    ],
+  },
+
+  'karnataka-bank': {
+    slug: 'karnataka-bank',
+    name: 'Karnataka Bank',
+    shortName: 'KBL',
+    tagline: 'Convert Karnataka Bank statement PDF to Excel instantly',
+    metaDescription: 'Convert your Karnataka Bank statement PDF to Excel, CSV or Tally XML in 15 seconds. Works with KBL Mobile+ and internet banking statements. Free to try.',
+    keywords: ['karnataka bank statement to excel', 'kbl pdf to excel', 'convert karnataka bank statement', 'kbl mobile plus statement excel'],
+    color: '#00447c',
+    statementFeatures: ['KBL Mobile+ app statements', 'Karnataka Bank internet banking statements', 'KBL savings & current account statements', 'KBL business banking statements'],
+    steps: ['Download your Karnataka Bank statement from KBL Mobile+ or internet banking', 'Upload the PDF to BankXL', 'Get your Excel in 15 seconds'],
+    formats: ['Excel (.xlsx) with color-coded debits/credits', 'CSV for accounting software', 'JSON for developers', 'Tally XML for direct import'],
+    faqs: [
+      { q: 'How do I download my Karnataka Bank statement?', a: 'Use KBL Mobile+ app → Accounts → e-Statement → Download. Or internet banking → Accounts → Statement → select period → Download PDF.' },
+      { q: 'Does BankXL work with KBL business account statements?', a: 'Yes. Business current account and cash credit statements are supported alongside savings accounts.' },
+      { q: 'Can I convert Karnataka Bank statements for Tally import?', a: 'Yes — Tally XML export lets you import transactions as vouchers directly into Tally Prime or ERP 9.' },
+    ],
+  },
+
+  'karur-vysya-bank': {
+    slug: 'karur-vysya-bank',
+    name: 'Karur Vysya Bank',
+    shortName: 'KVB',
+    tagline: 'Convert Karur Vysya Bank statement PDF to Excel instantly',
+    metaDescription: 'Convert your Karur Vysya Bank statement PDF to Excel, CSV or Tally XML in 15 seconds. Works with KVB mobile banking and internet banking statements. Free to try.',
+    keywords: ['karur vysya bank statement to excel', 'kvb pdf to excel', 'convert karur vysya bank statement', 'kvb statement converter'],
+    color: '#7a1f2b',
+    statementFeatures: ['KVB mobile banking statements', 'Karur Vysya Bank internet banking statements', 'KVB savings & current account statements', 'KVB MSME loan account statements'],
+    steps: ['Download your Karur Vysya Bank statement from mobile or internet banking', 'Upload the PDF to BankXL', 'Get your Excel in 15 seconds'],
+    formats: ['Excel (.xlsx) with color-coded debits/credits', 'CSV for accounting software', 'JSON for developers', 'Tally XML for direct import'],
+    faqs: [
+      { q: 'How do I download my Karur Vysya Bank statement?', a: 'Use the KVB mobile banking app → Accounts → e-Statement → Download. Or internet banking → Accounts → Statement → select period → Download PDF.' },
+      { q: 'Does BankXL work with KVB MSME loan statements?', a: 'Yes. MSME and business loan account statements are supported alongside savings and current accounts.' },
+      { q: 'Can I convert Karur Vysya Bank statements for Tally import?', a: 'Yes — export as Tally XML for direct Ctrl+I import into Tally Prime or ERP 9.' },
+    ],
+  },
+
+  'city-union-bank': {
+    slug: 'city-union-bank',
+    name: 'City Union Bank',
+    shortName: 'CUB',
+    tagline: 'Convert City Union Bank statement PDF to Excel instantly',
+    metaDescription: 'Convert your City Union Bank statement PDF to Excel, CSV or Tally XML in 15 seconds. Works with CUB mobile banking and internet banking statements. Free to try.',
+    keywords: ['city union bank statement to excel', 'cub pdf to excel', 'convert city union bank statement', 'cub statement converter'],
+    color: '#0f5ba3',
+    statementFeatures: ['CUB mobile banking statements', 'City Union Bank internet banking statements', 'CUB savings & current account statements', 'CUB MSME loan account statements'],
+    steps: ['Download your City Union Bank statement from mobile or internet banking', 'Upload the PDF to BankXL', 'Get your Excel in 15 seconds'],
+    formats: ['Excel (.xlsx) with color-coded debits/credits', 'CSV for accounting software', 'JSON for developers', 'Tally XML for direct import'],
+    faqs: [
+      { q: 'How do I download my City Union Bank statement?', a: 'Use the CUB mobile banking app → Accounts → e-Statement → Download. Or internet banking → Accounts → Statement → select period → Download PDF.' },
+      { q: 'Does BankXL work with CUB MSME statements?', a: 'Yes. MSME and business loan account statements are supported alongside savings and current accounts.' },
+      { q: 'Can I convert City Union Bank statements for Tally import?', a: 'Yes — Tally XML export lets you import transactions as vouchers directly into Tally Prime or ERP 9.' },
+    ],
+  },
 }
 
 export const ALL_BANK_SLUGS = Object.keys(BANK_PAGES)
