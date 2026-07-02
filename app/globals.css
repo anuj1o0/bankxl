@@ -349,12 +349,16 @@ a, button {
   nav, footer, .glow-blob, .grid-bg { display: none !important; }
 }
 
-/* ─── Convert page responsive layout ───────────────────────── */
+/* ─── Convert / persona page responsive layouts ────────────── */
 @media (max-width: 900px) {
   .convert-steps { grid-template-columns: 1fr !important; }
-  .convert-bento { grid-template-columns: repeat(2, 1fr) !important; }
+  .convert-bento,
+  .persona-bento { grid-template-columns: repeat(2, 1fr) !important; }
+  .workflow-grid { grid-template-columns: 1fr !important; }
 }
 @media (max-width: 560px) {
-  .convert-bento { grid-template-columns: 1fr !important; }
-  .convert-bento > div { grid-column: span 1 !important; }
+  .convert-bento,
+  .persona-bento { grid-template-columns: 1fr !important; }
+  .convert-bento > div,
+  .persona-bento > div { grid-column: span 1 !important; }
 }
