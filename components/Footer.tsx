@@ -22,6 +22,8 @@ export default function Footer() {
     {
       title: 'For', links: [
         ['Chartered Accountants', '/for/chartered-accountants'],
+        ['Loan Consultants', '/for/loan-consultants'],
+        ['Bank Reconciliation', '/use-cases/bank-reconciliation'],
         ['Blog & guides', '/blog'],
         ['BankXL vs Nanonets', '/compare/bankxl-vs-nanonets'],
       ]

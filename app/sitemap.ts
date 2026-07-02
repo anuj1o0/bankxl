@@ -4,6 +4,7 @@ import { ALL_CONVERT_SLUGS } from './convert/[format]/data'
 import { ALL_PERSONA_SLUGS } from './for/[persona]/data'
 import { ALL_COMPARE_SLUGS } from './compare/[slug]/data'
 import { ALL_BLOG_SLUGS } from './blog/[slug]/data'
+import { ALL_USE_CASE_SLUGS } from './use-cases/[slug]/data'
 import { resolveSiteUrl } from '@/lib/site-url'
 
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -60,9 +61,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
     changeFrequency: 'monthly' as const,
   }))
 
+  // Use-case pages (task-oriented intent)
+  const useCasePages = ALL_USE_CASE_SLUGS.map(slug => ({
+    path: `/use-cases/${slug}`,
+    priority: 0.8,
+    changeFrequency: 'monthly' as const,
+  }))
+
   return [
     ...staticPages, ...convertPages, ...personaPages,
-    ...comparePages, ...blogPages, ...bankPages,
+    ...comparePages, ...blogPages, ...bankPages, ...useCasePages,
   ].map(p => ({
     url: `${base}${p.path}`,
     lastModified: now,
