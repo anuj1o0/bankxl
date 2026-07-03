@@ -4,7 +4,7 @@ const nextConfig = {
   reactStrictMode: true,
   compress: true,
   experimental: {
-    serverComponentsExternalPackages: ['sharp', 'pdf-parse', 'exceljs', 'pdfjs-dist'],
+    serverComponentsExternalPackages: ['sharp', 'pdf-parse', 'exceljs'],
   },
 }
 module.exports = nextConfig

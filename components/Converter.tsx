@@ -33,14 +33,12 @@ export default function Converter({ user, freeMode, initialFormat = 'excel', sho
   const [activeStep, setActiveStep] = useState(0)
   const [result, setResult] = useState<Result | null>(null)
   const [error, setError] = useState('')
-  const [needsPassword, setNeedsPassword] = useState(false)
-  const [password, setPassword] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
 
   const handleFile = (f: File) => {
     if (!f.name.toLowerCase().endsWith('.pdf')) { setError('Please select a PDF file.'); return }
     if (f.size > 25 * 1024 * 1024) { setError('File too large (max 25 MB).'); return }
-    setFile(f); setError(''); setNeedsPassword(false); setPassword('')
+    setFile(f); setError('')
   }
 
   const convert = async () => {
@@ -78,7 +76,6 @@ export default function Converter({ user, freeMode, initialFormat = 'excel', sho
     const formData = new FormData()
     formData.append('pdf', file)
     formData.append('format', format)
-    if (password) formData.append('password', password)
 
     const apiPromise = fetch('/api/convert', { method: 'POST', body: formData })
     await runStep(0)
@@ -95,12 +92,6 @@ export default function Converter({ user, freeMode, initialFormat = 'excel', sho
 
     if (!response.ok) {
       const data = await response.json().catch(() => ({}))
-      if (data.code === 'PASSWORD_REQUIRED' || data.code === 'INCORRECT_PASSWORD') {
-        setNeedsPassword(true)
-        setStage('idle')
-        setError(data.code === 'INCORRECT_PASSWORD' ? 'Incorrect password. Please try again.' : '')
-        return
-      }
       setStage('error'); setError(data.error || 'Conversion failed.'); return
     }
 
@@ -133,7 +124,6 @@ export default function Converter({ user, freeMode, initialFormat = 'excel', sho
 
   const reset = () => {
     setFile(null); setStage('idle'); setProgress(0); setActiveStep(0); setResult(null); setError('')
-    setNeedsPassword(false); setPassword('')
   }
 
   return (
@@ -198,27 +188,6 @@ export default function Converter({ user, freeMode, initialFormat = 'excel', sho
             </div>
           )}
 
-          {needsPassword && (
-            <div style={{ margin: '0 20px 14px' }}>
-              <div style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 8 }}>
-                🔒 This PDF is password-protected. Enter the password to continue.
-              </div>
-              <input
-                type="password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter' && password) convert() }}
-                placeholder="PDF password"
-                autoFocus
-                style={{
-                  width: '100%', padding: '12px 14px', fontSize: 14, fontFamily: 'Sora,sans-serif',
-                  background: 'var(--surface-2)', border: '1px solid var(--border-strong)', borderRadius: 10,
-                  color: 'var(--text)', boxSizing: 'border-box',
-                }}
-              />
-            </div>
-          )}
-
           {error && (
             <div style={{ margin: '0 20px 14px', padding: '12px 14px', background: 'var(--error-bg)', border: '1px solid var(--error-border)', borderRadius: 10, fontSize: 13, color: 'var(--error)' }}>
               {error}
@@ -226,22 +195,17 @@ export default function Converter({ user, freeMode, initialFormat = 'excel', sho
           )}
 
           <div style={{ padding: '0 20px 20px' }}>
-            {(() => {
-              const canGo = !!file && (!needsPassword || !!password)
-              return (
-                <button onClick={convert} disabled={!canGo}
-                  style={{
-                    width: '100%', padding: 14,
-                    background: canGo ? 'var(--accent)' : 'var(--surface-2)',
-                    color: canGo ? 'var(--on-accent)' : 'var(--text-faint)',
-                    fontFamily: 'Sora,sans-serif', fontSize: 14, fontWeight: 600,
-                    border: 'none', borderRadius: 12, cursor: canGo ? 'pointer' : 'not-allowed',
-                    transition: 'all 0.2s', boxShadow: canGo ? 'var(--shadow-glow)' : 'none',
-                  }}>
-                  {!user && !freeMode ? 'Sign in to convert →' : needsPassword ? 'Unlock & convert →' : 'Convert now →'}
-                </button>
-              )
-            })()}
+            <button onClick={convert} disabled={!file}
+              style={{
+                width: '100%', padding: 14,
+                background: file ? 'var(--accent)' : 'var(--surface-2)',
+                color: file ? 'var(--on-accent)' : 'var(--text-faint)',
+                fontFamily: 'Sora,sans-serif', fontSize: 14, fontWeight: 600,
+                border: 'none', borderRadius: 12, cursor: file ? 'pointer' : 'not-allowed',
+                transition: 'all 0.2s', boxShadow: file ? 'var(--shadow-glow)' : 'none',
+              }}>
+              {!user && !freeMode ? 'Sign in to convert →' : 'Convert now →'}
+            </button>
           </div>
         </>
       )}

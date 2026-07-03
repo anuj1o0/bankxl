@@ -37,13 +37,12 @@ const Ic = ({ children, size = 16 }: { children: any; size?: number }) => (
 
 export default function InAppConverter() {
   const { profile, isPaid } = useDashboard()
-  const { active, recent, startJob, submitPassword, download, dismiss } = useConversions()
+  const { active, recent, startJob, download, dismiss } = useConversions()
 
   const [file, setFile] = useState<File | null>(null)
   const [format, setFormat] = useState<string>(profile?.default_format || 'excel')
   const [error, setError] = useState('')
   const [dragging, setDragging] = useState(false)
-  const [pwInput, setPwInput] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
 
   const myJob = useMemo(() => {
@@ -66,7 +65,7 @@ export default function InAppConverter() {
   }
 
   const reset = () => {
-    setFile(null); setError(''); setPwInput('')
+    setFile(null); setError('')
     if (myJob) dismiss(myJob.id)
   }
 
@@ -297,42 +296,7 @@ export default function InAppConverter() {
         </div>
       )}
 
-      {showJob && isError && myJob && myJob.passwordRequired && (
-        <div style={{ padding: 36, textAlign: 'center' }}>
-          <div style={{ width: 64, height: 64, background: 'var(--accent-bg)', border: '1.5px solid var(--accent-border)', borderRadius: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-            <Ic size={28}><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></Ic>
-          </div>
-          <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 6 }}>Password required</h3>
-          <p style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 18, lineHeight: 1.6, maxWidth: 380, margin: '0 auto 18px' }}>{myJob.error}</p>
-          <div style={{ maxWidth: 320, margin: '0 auto' }}>
-            <input
-              type="password"
-              value={pwInput}
-              onChange={e => setPwInput(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter' && pwInput) { submitPassword(myJob.id, pwInput); setPwInput('') } }}
-              placeholder="PDF password"
-              autoFocus
-              style={{
-                width: '100%', padding: '12px 14px', fontSize: 14, fontFamily: 'Sora,sans-serif',
-                background: 'var(--surface-2)', border: '1px solid var(--border-strong)', borderRadius: 10,
-                color: 'var(--text)', boxSizing: 'border-box', marginBottom: 12,
-              }}
-            />
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-              <button onClick={reset}
-                style={{ padding: '12px 18px', background: 'var(--surface-2)', color: 'var(--text)', border: '1px solid var(--border-strong)', borderRadius: 10, fontFamily: 'Sora,sans-serif', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                Cancel
-              </button>
-              <button onClick={() => { if (pwInput) { submitPassword(myJob.id, pwInput); setPwInput('') } }} disabled={!pwInput}
-                style={{ flex: 1, padding: '12px 18px', background: pwInput ? 'var(--accent)' : 'var(--surface-2)', color: pwInput ? 'var(--on-accent)' : 'var(--text-faint)', border: 'none', borderRadius: 10, fontFamily: 'Sora,sans-serif', fontSize: 13, fontWeight: 600, cursor: pwInput ? 'pointer' : 'not-allowed' }}>
-                Unlock & convert
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showJob && isError && myJob && !myJob.passwordRequired && (
+      {showJob && isError && myJob && (
         <div style={{ padding: 36, textAlign: 'center' }}>
           <div style={{ width: 64, height: 64, background: 'var(--error-bg)', border: '1.5px solid var(--error-border)', borderRadius: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--error)" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>

@@ -14,13 +14,11 @@ const FORMATS = [
 
 export default function BulkPage() {
   const { isPaid } = useDashboard()
-  const { jobs, startJob, submitPassword, download, dismiss, clearAll } = useConversions()
+  const { jobs, startJob, download, dismiss, clearAll } = useConversions()
   const [files, setFiles] = useState<File[]>([])
   const [running, setRunning] = useState(false)
   const [format, setFormat] = useState<'excel' | 'csv' | 'json' | 'tally'>('excel')
   const [dragging, setDragging] = useState(false)
-  const [pwJobId, setPwJobId] = useState<string | null>(null)
-  const [pwInput, setPwInput] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
 
   if (!isPaid) {
@@ -173,61 +171,33 @@ export default function BulkPage() {
                 </div>
               </div>
               {jobs.map(j => (
-                <div key={j.id} style={{ padding: '12px 18px', borderTop: '1px solid var(--hover)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{j.filename}</div>
-                      <div className="mono" style={{ fontSize: 11, color: j.passwordRequired ? 'var(--accent)' : 'var(--text-muted)', marginTop: 2 }}>
-                        {j.status === 'done' ? `${j.bank ? j.bank + ' · ' : ''}${j.txCount} tx · ${j.format.toUpperCase()}`
-                          : j.passwordRequired ? '🔒 Password-protected'
-                          : j.status === 'error' ? `Error: ${j.error}`
-                          : `${j.status === 'extracting' ? 'Reading transactions' : j.status === 'uploading' ? 'Uploading' : 'Processing'}... ${Math.round(j.progress)}%`}
-                      </div>
+                <div key={j.id} style={{ padding: '12px 18px', borderTop: '1px solid var(--hover)', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{j.filename}</div>
+                    <div className="mono" style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                      {j.status === 'done' ? `${j.bank ? j.bank + ' · ' : ''}${j.txCount} tx · ${j.format.toUpperCase()}`
+                        : j.status === 'error' ? `Error: ${j.error}`
+                        : `${j.status === 'extracting' ? 'Reading transactions' : j.status === 'uploading' ? 'Uploading' : 'Processing'}... ${Math.round(j.progress)}%`}
                     </div>
-                    {j.status === 'done' && !j.downloaded && (
-                      <button onClick={() => download(j.id)}
-                        style={{ padding: '6px 12px', background: 'var(--accent-bg-strong)', color: 'var(--accent)', border: '1px solid var(--accent-border)', borderRadius: 6, fontSize: 11, fontWeight: 500, cursor: 'pointer', fontFamily: 'Sora,sans-serif' }}>
-                        Download
-                      </button>
-                    )}
-                    {j.status === 'done' && j.downloaded && (
-                      <span style={{ fontSize: 10, color: 'var(--accent)' }}>✓ Downloaded</span>
-                    )}
-                    {j.status !== 'done' && j.status !== 'error' && (
-                      <span style={{ fontSize: 9, padding: '3px 9px', borderRadius: 20, background: 'var(--warning-bg)', color: 'var(--warning)', border: '1px solid var(--warning-border)', fontFamily: 'DM Mono, monospace', letterSpacing: 0.5 }}>
-                        RUNNING
-                      </span>
-                    )}
-                    {j.status === 'error' && j.passwordRequired && (
-                      <button onClick={() => { setPwJobId(pwJobId === j.id ? null : j.id); setPwInput('') }}
-                        style={{ padding: '6px 12px', background: 'var(--accent-bg-strong)', color: 'var(--accent)', border: '1px solid var(--accent-border)', borderRadius: 6, fontSize: 11, fontWeight: 500, cursor: 'pointer', fontFamily: 'Sora,sans-serif' }}>
-                        {pwJobId === j.id ? 'Cancel' : 'Enter password'}
-                      </button>
-                    )}
-                    {j.status === 'error' && (
-                      <button onClick={() => { dismiss(j.id); if (pwJobId === j.id) setPwJobId(null) }} style={{ width: 26, height: 26, borderRadius: 6, background: 'var(--hover)', color: 'var(--text-muted)', border: 'none', cursor: 'pointer' }}>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-                      </button>
-                    )}
                   </div>
-                  {pwJobId === j.id && (
-                    <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                      <input
-                        type="password"
-                        value={pwInput}
-                        onChange={e => setPwInput(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter' && pwInput) { submitPassword(j.id, pwInput); setPwJobId(null); setPwInput('') } }}
-                        placeholder="PDF password"
-                        autoFocus
-                        style={{ flex: 1, padding: '9px 12px', fontSize: 13, fontFamily: 'Sora,sans-serif', background: 'var(--surface)', border: '1px solid var(--border-strong)', borderRadius: 8, color: 'var(--text)' }}
-                      />
-                      <button
-                        onClick={() => { if (pwInput) { submitPassword(j.id, pwInput); setPwJobId(null); setPwInput('') } }}
-                        disabled={!pwInput}
-                        style={{ padding: '9px 16px', background: pwInput ? 'var(--accent)' : 'var(--hover)', color: pwInput ? 'var(--on-accent)' : 'var(--text-faint)', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: pwInput ? 'pointer' : 'not-allowed', fontFamily: 'Sora,sans-serif' }}>
-                        Unlock
-                      </button>
-                    </div>
+                  {j.status === 'done' && !j.downloaded && (
+                    <button onClick={() => download(j.id)}
+                      style={{ padding: '6px 12px', background: 'var(--accent-bg-strong)', color: 'var(--accent)', border: '1px solid var(--accent-border)', borderRadius: 6, fontSize: 11, fontWeight: 500, cursor: 'pointer', fontFamily: 'Sora,sans-serif' }}>
+                      Download
+                    </button>
+                  )}
+                  {j.status === 'done' && j.downloaded && (
+                    <span style={{ fontSize: 10, color: 'var(--accent)' }}>✓ Downloaded</span>
+                  )}
+                  {j.status !== 'done' && j.status !== 'error' && (
+                    <span style={{ fontSize: 9, padding: '3px 9px', borderRadius: 20, background: 'var(--warning-bg)', color: 'var(--warning)', border: '1px solid var(--warning-border)', fontFamily: 'DM Mono, monospace', letterSpacing: 0.5 }}>
+                      RUNNING
+                    </span>
+                  )}
+                  {j.status === 'error' && (
+                    <button onClick={() => dismiss(j.id)} style={{ width: 26, height: 26, borderRadius: 6, background: 'var(--hover)', color: 'var(--text-muted)', border: 'none', cursor: 'pointer' }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                    </button>
                   )}
                 </div>
               ))}

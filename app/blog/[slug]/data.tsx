@@ -724,10 +724,10 @@ export const BLOG_POSTS: Record<string, BlogPost> = {
 
         <H2 id="password-pdfs">What if the PDF is password-protected?</H2>
         <P>
-          Most Indian bank e-statements are password-locked (often your date of birth or PAN). BankXL can't
-          unlock these automatically — you need to remove the password once before uploading. Open the PDF
-          with the password in any PDF viewer, then <Strong>File → Print → Save as PDF</Strong> to create an
-          unlocked copy, and upload that copy instead.
+          Most Indian bank e-statements are password-locked (often your date of birth or PAN). Open the PDF
+          once with the password in any PDF viewer, then <Strong>File → Print → Save as PDF</Strong> to
+          create an unlocked copy. Convert that copy — the original with the password works too on BankXL
+          since you enter the password once during upload.
         </P>
 
         <H2 id="after-convert">After converting: cleaning up the data</H2>

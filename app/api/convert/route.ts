@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { generateExcel } from '@/lib/excel'
-import { extractFromPDF, extractFromPDFChunked, extractFromText, mergeAndClean, ExtractionResult } from '@/lib/gemini'
+import { extractFromPDF, extractFromPDFChunked, mergeAndClean, ExtractionResult } from '@/lib/gemini'
 import { toCSV, toJSON, toTallyXML, FORMAT_INFO, ExportFormat } from '@/lib/formats'
 import { validatePdf, PdfValidationError } from '@/lib/pdf-validation'
-import { needsPassword, decryptAndExtractText, IncorrectPasswordError } from '@/lib/pdf-decrypt'
 import { bankNameFromFilename } from '@/lib/normalize'
 
 // Hobby plan caps at 60s; Pro plan supports up to 300s. With chunked
@@ -242,7 +241,6 @@ export async function POST(req: NextRequest) {
   const requestedFormat = (formData.get('format') as string) || 'excel'
   const format: ExportFormat = isValidFormat(requestedFormat) ? requestedFormat : 'excel'
   const brandFromForm = (formData.get('brandName') as string) || undefined
-  const password = (formData.get('password') as string) || ''
 
   if (!file) return NextResponse.json({ error: 'No file received.' }, { status: 400 })
   if (!file.name.toLowerCase().endsWith('.pdf')) {
@@ -257,70 +255,24 @@ export async function POST(req: NextRequest) {
 
   const fileBuffer = Buffer.from(await file.arrayBuffer())
 
-  // Step 0: password-protected PDFs get decrypted (and their text extracted)
-  // up front, before any other validation — pdf-lib/Gemini's native PDF
-  // ingestion cannot read encrypted content streams at all. See lib/pdf-decrypt.ts
-  // for why pdfjs-dist (not pdf-lib) is used here.
-  let decryptedPagesText: string[] | null = null
-  try {
-    if (await needsPassword(fileBuffer)) {
-      if (!password) {
-        return NextResponse.json({
-          error: 'This PDF is password-protected. Enter the password to continue.',
-          code: 'PASSWORD_REQUIRED',
-        }, { status: 422 })
-      }
-      try {
-        decryptedPagesText = await decryptAndExtractText(fileBuffer, password)
-      } catch (e: any) {
-        if (e instanceof IncorrectPasswordError) {
-          return NextResponse.json({
-            error: 'Incorrect password. Please try again.',
-            code: 'INCORRECT_PASSWORD',
-          }, { status: 422 })
-        }
-        throw e
-      }
-    }
-  } catch (e: any) {
-    console.error('[convert] password check/decrypt failed:', e?.message)
-    return NextResponse.json({
-      error: 'Could not open this PDF. If it is password-protected, make sure the password is correct.',
-    }, { status: 400 })
-  }
-
-  // Step 1: validate the PDF (magic bytes, encryption, page count). Skipped
-  // for the password path above — we already have an authoritative page
-  // count from pdfjs-dist and the buffer is still the original encrypted
-  // bytes (which pdf-lib would just reject again).
+  // Step 1: validate the PDF (magic bytes, encryption, page count). This
+  // catches password-protected, corrupt, and not-actually-PDF files with
+  // friendly error messages BEFORE we burn any Gemini calls.
   const tPages = Date.now()
   let pageCount: number
-  if (decryptedPagesText) {
-    pageCount = decryptedPagesText.length
-    console.log(`[convert] decrypted: ${Date.now() - tPages}ms (${pageCount} pages, password-protected)`)
+  try {
+    const info = await validatePdf(fileBuffer)
+    pageCount = info.pageCount
+    console.log(`[convert] validated: ${Date.now() - tPages}ms (${pageCount} pages, ${(file.size / 1024).toFixed(0)} KB${info.isEncrypted ? ', encrypted' : ''})`)
+  } catch (e: any) {
+    if (e instanceof PdfValidationError) {
+      console.warn(`[convert] PDF validation failed: ${e.userMessage} (${e.detail || '-'})`)
+      return NextResponse.json({ error: e.userMessage }, { status: 400 })
+    }
+    // Fallback to pdf-parse if pdf-lib bombs in some weird way
+    pageCount = await getPageCount(fileBuffer)
     if (pageCount < 1) {
-      return NextResponse.json({ error: 'This PDF has zero pages. Please check the file and try again.' }, { status: 400 })
-    }
-    if (pageCount > 200) {
-      return NextResponse.json({
-        error: `This PDF has ${pageCount} pages, which is too large to process in one go. Please split it into smaller files (e.g. one statement per month) and upload them separately.`,
-      }, { status: 400 })
-    }
-  } else {
-    try {
-      const info = await validatePdf(fileBuffer)
-      pageCount = info.pageCount
-      console.log(`[convert] validated: ${Date.now() - tPages}ms (${pageCount} pages, ${(file.size / 1024).toFixed(0)} KB${info.isEncrypted ? ', encrypted' : ''})`)
-    } catch (e: any) {
-      if (e instanceof PdfValidationError) {
-        console.warn(`[convert] PDF validation failed: ${e.userMessage} (${e.detail || '-'})`)
-        return NextResponse.json({ error: e.userMessage }, { status: 400 })
-      }
-      // Fallback to pdf-parse if pdf-lib bombs in some weird way
-      pageCount = await getPageCount(fileBuffer)
-      if (pageCount < 1) {
-        return NextResponse.json({ error: 'Could not read PDF. Make sure the file is a valid, unlocked PDF.' }, { status: 400 })
-      }
+      return NextResponse.json({ error: 'Could not read PDF. Make sure the file is a valid, unlocked PDF.' }, { status: 400 })
     }
   }
 
@@ -345,19 +297,15 @@ export async function POST(req: NextRequest) {
   const tExtract = Date.now()
   let extracted: ExtractionResult
   try {
-    // Password-protected statements were already decrypted to plain text in
-    // Step 0 — send that straight to Gemini instead of PDF bytes/chunks.
     // Small PDFs (≤ 6 pages) → single Gemini call, no chunking.
     //   - These already finish in 45-50s as one request, no benefit from splitting.
     // Larger PDFs (> 6 pages) → split into 2-page chunks, parallel + sequential
     // retry for any failed chunks. See extractFromPDFChunked() for details.
     const CHUNK_THRESHOLD = 6
     const PAGES_PER_CHUNK = 2
-    const extractor = decryptedPagesText
-      ? extractFromText(decryptedPagesText)
-      : pageCount > CHUNK_THRESHOLD
-        ? extractFromPDFChunked(fileBuffer, PAGES_PER_CHUNK)
-        : extractFromPDF(fileBuffer)
+    const extractor = pageCount > CHUNK_THRESHOLD
+      ? extractFromPDFChunked(fileBuffer, PAGES_PER_CHUNK)
+      : extractFromPDF(fileBuffer)
 
     extracted = await Promise.race([
       extractor,
