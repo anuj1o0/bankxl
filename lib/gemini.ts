@@ -275,6 +275,134 @@ async function callGeminiFile(pdfBuffer: Buffer, apiKey: string, model: string):
   return parseResponse(await res.json(), model)
 }
 
+const TEXT_PROMPT = `Below is text extracted from a bank statement PDF, page by page. Rows were
+reconstructed from the original PDF's layout (left-to-right, top-to-bottom), so columns
+may be separated by variable whitespace rather than clean table borders — infer the
+date / description / debit / credit / balance columns from context and position.
+
+Return ONLY a single valid JSON object — no markdown, no code fences, no explanation.
+
+${BANK_HINTS}
+
+Schema (every key required, use null if unknown):
+{
+  "meta": {
+    "bank_name": "Full bank name (look for it in the text — use IFSC prefix if needed)",
+    "account_holder": "string|null",
+    "account_no": "string|null",
+    "ifsc": "string|null",
+    "period_from": "YYYY-MM-DD|null",
+    "period_to": "YYYY-MM-DD|null",
+    "opening_balance": number|null,
+    "closing_balance": number|null,
+    "currency": "INR",
+    "total_pages": number|null
+  },
+  "transactions": [
+    {"date":"YYYY-MM-DD","description":"string","debit":number|null,"credit":number|null,"balance":number|null,"ref_no":"string|null"}
+  ]
+}
+
+Rules:
+- Amounts: plain numbers only, no commas, no currency symbols. E.g. 12400.50 not "12,400.50".
+- Dates: YYYY-MM-DD always. If year is missing, infer from statement period.
+- Debit (Dr/Withdrawal/Debit): debit=amount, credit=null.
+- Credit (Cr/Deposit/Credit): credit=amount, debit=null.
+- ref_no: UPI ref / UTR / cheque number / IMPS ref.
+- SKIP: header rows, page totals, "Brought Forward", "Carried Forward", opening/closing balance rows.
+- bank_name: NEVER return null or "Unknown". If you cannot determine the bank, return your best guess based on IFSC or format.
+- Include EVERY transaction across ALL pages. Do not truncate.
+- Default currency to INR for Indian banks.
+
+--- STATEMENT TEXT START ---
+`
+
+// ─── Text-based call (decrypted, password-protected PDFs) ────────────────────
+// pdf-lib/Gemini's native PDF ingestion can't read encrypted content streams,
+// so password-protected statements are decrypted with pdfjs-dist and their
+// text handed here instead of PDF bytes. See lib/pdf-decrypt.ts.
+async function callGeminiText(statementText: string, apiKey: string, model: string): Promise<ExtractionResult> {
+  const t0 = Date.now()
+  const res = await fetchWithRetry(`${BASE}/models/${model}:generateContent?key=${apiKey}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{
+        parts: [{ text: TEXT_PROMPT + statementText + '\n--- STATEMENT TEXT END ---' }],
+      }],
+      generationConfig: {
+        temperature: 0,
+        maxOutputTokens: MAX_OUTPUT_TOKENS,
+        responseMimeType: 'application/json',
+      },
+    }),
+    signal: AbortSignal.timeout(50000),
+  }, `${model} text`)
+
+  console.log(`[gemini] ${model} text: ${Date.now() - t0}ms status=${res.status}`)
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    const msg = err?.error?.message || `HTTP ${res.status}`
+    if (res.status === 429) throw new Error(`RATE_LIMIT: ${msg}`)
+    if (res.status === 400) throw new Error(`This statement couldn't be read by AI: ${msg}`)
+    throw new Error(`Extraction failed (${res.status}): ${msg}`)
+  }
+  return parseResponse(await res.json(), model)
+}
+
+// ─── Main export for decrypted (formerly password-protected) statements ─────
+// Same model cascade + retry strategy as extractFromPDF, just a text prompt
+// instead of inline/file PDF data.
+export async function extractFromText(pagesText: string[]): Promise<ExtractionResult> {
+  const apiKey = process.env.GEMINI_API_KEY
+  if (!apiKey) throw new Error('GEMINI_API_KEY not set. Get a free key at https://aistudio.google.com/app/apikey')
+
+  const statementText = pagesText
+    .map((text, i) => `[Page ${i + 1}]\n${text}`)
+    .join('\n\n')
+
+  const models = [MODEL_FAST, MODEL_ACCURATE, MODEL_LEGACY]
+
+  for (let i = 0; i < models.length; i++) {
+    const model = models[i]
+    const isLast = i === models.length - 1
+
+    try {
+      const result = await withRetry(() => callGeminiText(statementText, apiKey, model), 1, 20000)
+
+      if (result.transactions.length > 0) {
+        if (!result.meta.bank_name && result.meta.ifsc) {
+          result.meta.bank_name = bankFromIfsc(result.meta.ifsc)
+        }
+        return result
+      }
+      console.warn(`[gemini] ${model} (text) returned 0 transactions — trying next model`)
+    } catch (err: any) {
+      const msg = String(err?.message || '')
+      const isDaily = isDailyLimitError(msg)
+      const isRateLimit = /rate_limit|rate.?limit|quota|resource.?exhausted/i.test(msg)
+
+      if (isRateLimit) {
+        if (isLast) {
+          throw new Error(
+            isDaily
+              ? 'Daily AI limit reached. Please try again after midnight, or contact support if urgent.'
+              : 'AI service is temporarily at capacity. Please wait 1–2 minutes and try again.'
+          )
+        }
+        console.warn(`[gemini] ${model} (text) ${isDaily ? 'daily limit' : 'rate limit'} — switching to ${models[i + 1]}`)
+        continue
+      }
+      throw err
+    }
+  }
+
+  throw new Error(
+    'No transactions found in this PDF. Make sure it is a real bank statement (not an account summary or scanned image with poor quality).'
+  )
+}
+
 // ─── Split a PDF into N-page chunks ───────────────────────────────────────────
 // Returns an array of Buffers, each a valid PDF containing a slice of the input.
 // Uses ignoreEncryption so lightly-encrypted (but readable) PDFs still split.

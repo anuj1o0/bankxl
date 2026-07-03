@@ -14,11 +14,13 @@ export interface Job {
   filename_out?: string
   error?: string
   errorCanTopup?: boolean
+  passwordRequired?: boolean
   txCount?: number
   pages?: number
   bank?: string
   conversionId?: string
   downloaded?: boolean
+  file?: File // kept so a password-protected PDF can be resubmitted without re-picking the file
 }
 
 interface Ctx {
@@ -26,6 +28,7 @@ interface Ctx {
   active: Job[]
   recent: Job[]
   startJob: (file: File, format: Job['format']) => string
+  submitPassword: (jobId: string, password: string) => void
   download: (jobId: string) => void
   dismiss: (jobId: string) => void
   retry: (jobId: string) => void
@@ -69,20 +72,14 @@ export function ConversionsProvider({ children, onComplete }: { children: ReactN
     requestAnimationFrame(tick)
   }, [updateJob])
 
-  const startJob = useCallback((file: File, format: Job['format']) => {
-    const id = `job_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
-    const job: Job = {
-      id, filename: file.name, format,
-      status: 'queued', progress: 0, startedAt: Date.now(),
-    }
-    setJobs(prev => [job, ...prev])
-
+  const runUpload = useCallback((id: string, file: File, format: Job['format'], password?: string) => {
     const signal = { cancelled: false }
     setTimeout(() => runProgress(id, signal), 100)
 
     const formData = new FormData()
     formData.append('pdf', file)
     formData.append('format', format)
+    if (password) formData.append('password', password)
 
     ;(async () => {
       try {
@@ -90,16 +87,18 @@ export function ConversionsProvider({ children, onComplete }: { children: ReactN
         if (!res.ok) {
           const data = await res.json().catch(() => ({}))
           signal.cancelled = true
+          const isPasswordIssue = data.code === 'PASSWORD_REQUIRED' || data.code === 'INCORRECT_PASSWORD'
           updateJob(id, {
             status: 'error',
             error: data.error || 'Conversion failed',
             errorCanTopup: !!data.canTopup,
+            passwordRequired: isPasswordIssue,
             progress: 0,
             completedAt: Date.now(),
           })
           return
         }
-        updateJob(id, { status: 'building', progress: 95 })
+        updateJob(id, { status: 'building', progress: 95, passwordRequired: false })
         const blob = await res.blob()
         const txCount = parseInt(res.headers.get('X-Transactions-Count') || '0')
         const pages = parseInt(res.headers.get('X-Pages-Count') || '1')
@@ -115,9 +114,30 @@ export function ConversionsProvider({ children, onComplete }: { children: ReactN
         updateJob(id, { status: 'error', error: e.message || 'Network error', progress: 0, completedAt: Date.now() })
       }
     })()
-
-    return id
   }, [updateJob, runProgress])
+
+  const startJob = useCallback((file: File, format: Job['format']) => {
+    const id = `job_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+    const job: Job = {
+      id, filename: file.name, format, file,
+      status: 'queued', progress: 0, startedAt: Date.now(),
+    }
+    setJobs(prev => [job, ...prev])
+    runUpload(id, file, format)
+    return id
+  }, [runUpload])
+
+  // Resubmits a job that came back as PASSWORD_REQUIRED / INCORRECT_PASSWORD,
+  // reusing the same File object so the user doesn't have to re-pick it.
+  const submitPassword = useCallback((jobId: string, password: string) => {
+    setJobs(prev => {
+      const job = prev.find(j => j.id === jobId)
+      if (!job?.file) return prev
+      updateJob(jobId, { status: 'queued', progress: 0, error: undefined, passwordRequired: false })
+      runUpload(jobId, job.file, job.format, password)
+      return prev
+    })
+  }, [updateJob, runUpload])
 
   const download = useCallback((jobId: string) => {
     const j = jobs.find(x => x.id === jobId)
@@ -145,7 +165,7 @@ export function ConversionsProvider({ children, onComplete }: { children: ReactN
   const recent = jobs.filter(j => j.status === 'done' || j.status === 'error')
 
   return (
-    <ConversionsContext.Provider value={{ jobs, active, recent, startJob, download, dismiss, retry, clearAll }}>
+    <ConversionsContext.Provider value={{ jobs, active, recent, startJob, submitPassword, download, dismiss, retry, clearAll }}>
       {children}
     </ConversionsContext.Provider>
   )
