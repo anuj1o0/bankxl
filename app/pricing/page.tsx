@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
+import { track } from '@/lib/track'
 import { useRazorpay, CheckoutResponse } from '@/components/useRazorpay'
 import Nav from '@/components/Nav'
 import Footer from '@/components/Footer'
@@ -147,6 +148,7 @@ export default function PricingPage() {
   // ─── Razorpay checkout (India) ─────────────────────────────────────────────
   const startRazorpayCheckout = async (planKey: string) => {
     setLoading(planKey)
+    track('checkout_started', { plan: planKey, cycle })
     let data: CheckoutResponse
     try {
       const res = await fetch('/api/razorpay/subscribe', {
@@ -156,11 +158,13 @@ export default function PricingPage() {
       })
       data = await res.json()
       if (!res.ok) {
+        track('checkout_failed', { plan: planKey, reason: 'subscribe_api_error' })
         alert((data as any).error || 'Could not start checkout. Please try again.')
         setLoading('')
         return
       }
     } catch {
+      track('checkout_failed', { plan: planKey, reason: 'network_error' })
       alert('Network error. Check your connection and try again.')
       setLoading('')
       return
@@ -170,12 +174,14 @@ export default function PricingPage() {
       await openCheckout(data, {
         onSuccess: async (success) => {
           try { await verifyPayment(success) } catch (e) { console.warn('[checkout] verify:', e) }
+          track('purchase', { plan: planKey, cycle })
           window.location.href = `/dashboard?upgraded=true&plan=${planKey}&provider=razorpay`
         },
-        onDismiss: () => setLoading(''),
-        onFailure: (err) => { alert('Payment failed: ' + err); setLoading('') },
+        onDismiss: () => { track('checkout_dismissed', { plan: planKey }); setLoading('') },
+        onFailure: (err) => { track('checkout_failed', { plan: planKey, reason: 'razorpay_failure' }); alert('Payment failed: ' + err); setLoading('') },
       })
     } catch (e: any) {
+      track('checkout_failed', { plan: planKey, reason: 'open_checkout_error' })
       alert(e.message || 'Could not open payment. Please try again.')
       setLoading('')
     }
@@ -187,14 +193,28 @@ export default function PricingPage() {
   // payment providers and two sets of plan IDs.
   const startCheckout = async (planKey: string | null) => {
     if (!planKey) return
-    if (!user) { router.push(`/login?redirect=/pricing&plan=${planKey}`); return }
+    if (!user) {
+      track('checkout_login_wall_hit', { plan: planKey })
+      router.push(`/login?redirect=/pricing&plan=${planKey}`)
+      return
+    }
     await startRazorpayCheckout(planKey)
   }
 
   const dayPass = () => startCheckout('day_pass')
 
+  const faqLD = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: FAQ.map(f => ({
+      '@type': 'Question', name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  }
+
   return (
     <div className="grid-bg" style={{ minHeight: '100vh' }}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLD) }} />
       <Nav />
 
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '56px 24px 32px', textAlign: 'center' }}>

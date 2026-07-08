@@ -241,6 +241,24 @@ export default function BankPage({ params }: Props) {
           </div>
         </section>
 
+        {/* Related resources — cross-links into personas, use-cases, comparisons */}
+        <section style={{ marginTop: 32 }}>
+          <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16, color: 'var(--text-dim)' }}>Built for how you actually use it:</h3>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {[
+              { href: '/for/chartered-accountants', label: 'For Chartered Accountants' },
+              { href: '/use-cases/bank-reconciliation', label: 'Bank Reconciliation Guide' },
+              { href: '/convert/bank-statement-to-tally', label: 'Export to Tally XML' },
+              { href: '/compare/bankxl-vs-nanonets', label: 'BankXL vs Nanonets' },
+              { href: '/blog/how-to-import-bank-statement-in-tally-prime', label: 'Tally Prime Import Guide' },
+            ].map(l => (
+              <Link key={l.href} href={l.href} style={{ fontSize: 13, padding: '6px 14px', borderRadius: 8, background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', color: 'var(--accent)', textDecoration: 'none' }}>
+                {l.label}
+              </Link>
+            ))}
+          </div>
+        </section>
+
       </div>
       <Footer />
     </div>

@@ -43,6 +43,66 @@ const I = {
   quote:  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M7 7h3v3H7v3a3 3 0 0 1-3 3v-3a6 6 0 0 1 3-6zm10 0h3v3h-3v3a3 3 0 0 1-3 3v-3a6 6 0 0 1 3-6z"/></svg>,
 }
 
+// Cross-links out of each persona page into the rest of the site — without
+// this, personas were a dead end (only linking to homepage/pricing/converter),
+// wasting the topical relevance a CA-focused visitor has for use-case and
+// comparison content they'd also convert on.
+const RELATED_LINKS: Record<string, { href: string; label: string }[]> = {
+  'chartered-accountants': [
+    { href: '/use-cases/bank-reconciliation', label: 'Bank Reconciliation Guide' },
+    { href: '/for/auditors', label: 'For Auditors' },
+    { href: '/banks/hdfc', label: 'HDFC Statement Converter' },
+    { href: '/compare/bankxl-vs-nanonets', label: 'BankXL vs Nanonets' },
+  ],
+  'auditors': [
+    { href: '/use-cases/bank-reconciliation', label: 'Bank Reconciliation Guide' },
+    { href: '/for/chartered-accountants', label: 'For Chartered Accountants' },
+    { href: '/banks/sbi', label: 'SBI Statement Converter' },
+    { href: '/compare/bankxl-vs-docsumo', label: 'BankXL vs Docsumo' },
+  ],
+  'tax-consultants': [
+    { href: '/use-cases/tax-filing', label: 'Tax Filing Guide' },
+    { href: '/use-cases/gst-audit', label: 'GST Audit Guide' },
+    { href: '/for/chartered-accountants', label: 'For Chartered Accountants' },
+    { href: '/banks/icici', label: 'ICICI Statement Converter' },
+  ],
+  'loan-consultants': [
+    { href: '/use-cases/loan-processing', label: 'Loan Processing Guide' },
+    { href: '/for/chartered-accountants', label: 'For Chartered Accountants' },
+    { href: '/banks/hdfc', label: 'HDFC Statement Converter' },
+    { href: '/compare/bankxl-vs-nanonets', label: 'BankXL vs Nanonets' },
+  ],
+  'bookkeepers': [
+    { href: '/use-cases/bank-reconciliation', label: 'Bank Reconciliation Guide' },
+    { href: '/for/small-businesses', label: 'For Small Businesses' },
+    { href: '/convert/bank-statement-to-csv', label: 'Convert to CSV' },
+    { href: '/compare/bankxl-vs-ilovepdf', label: 'BankXL vs iLovePDF' },
+  ],
+  'ca-firms': [
+    { href: '/for/chartered-accountants', label: 'For Chartered Accountants' },
+    { href: '/use-cases/gst-audit', label: 'GST Audit Guide' },
+    { href: '/use-cases/bank-reconciliation', label: 'Bank Reconciliation Guide' },
+    { href: '/convert/bank-statement-to-tally', label: 'Export to Tally XML' },
+  ],
+  'finance-teams': [
+    { href: '/use-cases/bank-reconciliation', label: 'Bank Reconciliation Guide' },
+    { href: '/for/ca-firms', label: 'For CA Firms' },
+    { href: '/convert/bank-statement-to-json', label: 'Convert to JSON' },
+    { href: '/compare/bankxl-vs-nanonets', label: 'BankXL vs Nanonets' },
+  ],
+  'small-businesses': [
+    { href: '/for/bookkeepers', label: 'For Bookkeepers' },
+    { href: '/use-cases/tax-filing', label: 'Tax Filing Guide' },
+    { href: '/banks/hdfc', label: 'HDFC Statement Converter' },
+    { href: '/convert/bank-statement-to-excel', label: 'Convert to Excel' },
+  ],
+  default: [
+    { href: '/use-cases/bank-reconciliation', label: 'Bank Reconciliation Guide' },
+    { href: '/banks', label: 'All Supported Banks' },
+    { href: '/compare/bankxl-vs-nanonets', label: 'BankXL vs Nanonets' },
+  ],
+}
+
 export default function PersonaPage({ params }: Props) {
   const data = PERSONA_PAGES[params.persona]
   if (!data) notFound()
@@ -234,6 +294,18 @@ export default function PersonaPage({ params }: Props) {
                 </summary>
                 <p style={{ marginTop: 12, fontSize: 14, color: 'var(--text-dim)', lineHeight: 1.7 }}>{faq.a}</p>
               </details>
+            ))}
+          </div>
+        </section>
+
+        {/* ─── Related resources — cross-links so personas don't dead-end ── */}
+        <section style={{ marginBottom: 48 }}>
+          <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16, color: 'var(--text-dim)' }}>Related to your workflow:</h3>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {(RELATED_LINKS[data.slug] ?? RELATED_LINKS.default).map(l => (
+              <Link key={l.href} href={l.href} style={{ fontSize: 13, padding: '6px 14px', borderRadius: 8, background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', color: 'var(--accent)', textDecoration: 'none' }}>
+                {l.label}
+              </Link>
             ))}
           </div>
         </section>

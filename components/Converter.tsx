@@ -1,5 +1,6 @@
 'use client'
 import { useState, useRef } from 'react'
+import { track } from '@/lib/track'
 
 interface Props {
   user: any
@@ -44,9 +45,11 @@ export default function Converter({ user, freeMode, initialFormat = 'excel', sho
   const convert = async () => {
     if (!file) return
     if (!user && !freeMode) {
+      track('signup_wall_hit', { source: 'homepage_converter' })
       window.location.href = '/login?redirect=/#converter'; return
     }
 
+    track('upload_started', { format })
     setStage('converting'); setProgress(0); setActiveStep(0)
 
     const steps = [
@@ -85,6 +88,7 @@ export default function Converter({ user, freeMode, initialFormat = 'excel', sho
     try {
       response = await apiPromise
     } catch {
+      track('conversion_failed', { format, reason: 'network_error' })
       setStage('error'); setError('Network error. Check your connection.'); return
     }
 
@@ -92,6 +96,7 @@ export default function Converter({ user, freeMode, initialFormat = 'excel', sho
 
     if (!response.ok) {
       const data = await response.json().catch(() => ({}))
+      track('conversion_failed', { format, reason: data.canTopup ? 'usage_limit' : 'extraction_error' })
       setStage('error'); setError(data.error || 'Conversion failed.'); return
     }
 
@@ -111,6 +116,7 @@ export default function Converter({ user, freeMode, initialFormat = 'excel', sho
       blob,
       filename: file.name.replace(/\.pdf$/i, '') + '_bankxl.' + ext,
     })
+    track('conversion_complete', { format, pages, txCount, bank })
     setStage('done')
   }
 

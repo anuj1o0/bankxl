@@ -227,6 +227,24 @@ export default function ComparePage({ params }: Props) {
           </div>
         </section>
 
+        {/* Related resources — comparison shoppers are high buyer-intent;
+            route them to the persona/use-case pages that reinforce fit */}
+        <section style={{ marginBottom: 48 }}>
+          <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16, color: 'var(--text-dim)' }}>See BankXL built for your workflow:</h3>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {[
+              { href: '/for/chartered-accountants', label: 'For Chartered Accountants' },
+              { href: '/use-cases/bank-reconciliation', label: 'Bank Reconciliation Guide' },
+              { href: '/use-cases/loan-processing', label: 'Loan Processing Guide' },
+              { href: '/convert/bank-statement-to-tally', label: 'Export to Tally XML' },
+            ].map(l => (
+              <Link key={l.href} href={l.href} style={{ fontSize: 13, padding: '6px 14px', borderRadius: 8, background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', color: 'var(--accent)', textDecoration: 'none' }}>
+                {l.label}
+              </Link>
+            ))}
+          </div>
+        </section>
+
         {/* CTA */}
         <section style={{ marginBottom: 48 }}>
           <div style={{
