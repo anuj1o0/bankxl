@@ -3,6 +3,7 @@ import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
+import { track } from '@/lib/track'
 import Logo from '@/components/Logo'
 
 type Mode = 'login' | 'signup' | 'forgot'
@@ -40,6 +41,7 @@ function LoginForm() {
         },
       })
       if (err) { setError(err.message); setLoading(false); return }
+      track('sign_up', { method: 'email' })
       setSuccess('Check your inbox to verify your email, then sign in.')
     } else if (mode === 'login') {
       const { error: err } = await sb.auth.signInWithPassword({ email, password })
@@ -57,6 +59,7 @@ function LoginForm() {
 
   const google = async () => {
     setOauthLoading(true); setError('')
+    track(mode === 'signup' ? 'sign_up' : 'login', { method: 'google' })
     const sb = createClient()
     const redirect = params.get('redirect') || '/dashboard'
     await sb.auth.signInWithOAuth({

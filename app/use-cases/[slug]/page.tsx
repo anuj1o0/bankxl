@@ -43,6 +43,40 @@ const I = {
   quote:  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M7 7h3v3H7v3a3 3 0 0 1-3 3v-3a6 6 0 0 1 3-6zm10 0h3v3h-3v3a3 3 0 0 1-3 3v-3a6 6 0 0 1 3-6z"/></svg>,
 }
 
+// Cross-links so use-case pages route visitors toward the persona/bank/
+// comparison content most relevant to the task they searched for.
+const RELATED_LINKS: Record<string, { href: string; label: string }[]> = {
+  'bank-reconciliation': [
+    { href: '/for/chartered-accountants', label: 'For Chartered Accountants' },
+    { href: '/for/bookkeepers', label: 'For Bookkeepers' },
+    { href: '/for/auditors', label: 'For Auditors' },
+    { href: '/convert/bank-statement-to-excel', label: 'Convert to Excel' },
+  ],
+  'loan-processing': [
+    { href: '/for/loan-consultants', label: 'For Loan Consultants' },
+    { href: '/for/chartered-accountants', label: 'For Chartered Accountants' },
+    { href: '/banks/hdfc', label: 'HDFC Statement Converter' },
+    { href: '/compare/bankxl-vs-nanonets', label: 'BankXL vs Nanonets' },
+  ],
+  'gst-audit': [
+    { href: '/for/chartered-accountants', label: 'For Chartered Accountants' },
+    { href: '/for/ca-firms', label: 'For CA Firms' },
+    { href: '/use-cases/tax-filing', label: 'Tax Filing Guide' },
+    { href: '/convert/bank-statement-to-excel', label: 'Convert to Excel' },
+  ],
+  'tax-filing': [
+    { href: '/for/tax-consultants', label: 'For Tax Consultants' },
+    { href: '/for/chartered-accountants', label: 'For Chartered Accountants' },
+    { href: '/use-cases/gst-audit', label: 'GST Audit Guide' },
+    { href: '/convert/bank-statement-to-csv', label: 'Convert to CSV' },
+  ],
+  default: [
+    { href: '/for/chartered-accountants', label: 'For Chartered Accountants' },
+    { href: '/banks', label: 'All Supported Banks' },
+    { href: '/compare/bankxl-vs-nanonets', label: 'BankXL vs Nanonets' },
+  ],
+}
+
 export default function UseCasePage({ params }: Props) {
   const data = USE_CASE_PAGES[params.slug]
   if (!data) notFound()
@@ -234,6 +268,18 @@ export default function UseCasePage({ params }: Props) {
                 </summary>
                 <p style={{ marginTop: 12, fontSize: 14, color: 'var(--text-dim)', lineHeight: 1.7 }}>{faq.a}</p>
               </details>
+            ))}
+          </div>
+        </section>
+
+        {/* ─── Related resources — cross-links into personas/banks/compare ── */}
+        <section style={{ marginBottom: 48 }}>
+          <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16, color: 'var(--text-dim)' }}>Related to your workflow:</h3>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {(RELATED_LINKS[data.slug] ?? RELATED_LINKS.default).map(l => (
+              <Link key={l.href} href={l.href} style={{ fontSize: 13, padding: '6px 14px', borderRadius: 8, background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', color: 'var(--accent)', textDecoration: 'none' }}>
+                {l.label}
+              </Link>
             ))}
           </div>
         </section>

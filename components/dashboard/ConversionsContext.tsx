@@ -1,5 +1,6 @@
 'use client'
 import { createContext, useContext, useState, useCallback, useRef, ReactNode } from 'react'
+import { track } from '@/lib/track'
 
 export type JobStatus = 'queued' | 'uploading' | 'extracting' | 'building' | 'done' | 'error'
 export interface Job {
@@ -76,6 +77,7 @@ export function ConversionsProvider({ children, onComplete }: { children: ReactN
       status: 'queued', progress: 0, startedAt: Date.now(),
     }
     setJobs(prev => [job, ...prev])
+    track('upload_started', { format, surface: 'dashboard' })
 
     const signal = { cancelled: false }
     setTimeout(() => runProgress(id, signal), 100)
@@ -90,6 +92,7 @@ export function ConversionsProvider({ children, onComplete }: { children: ReactN
         if (!res.ok) {
           const data = await res.json().catch(() => ({}))
           signal.cancelled = true
+          track('conversion_failed', { format, surface: 'dashboard', reason: data.canTopup ? 'usage_limit' : 'extraction_error' })
           updateJob(id, {
             status: 'error',
             error: data.error || 'Conversion failed',
@@ -109,9 +112,11 @@ export function ConversionsProvider({ children, onComplete }: { children: ReactN
         const filename_out = file.name.replace(/\.pdf$/i, '') + '_bankxl.' + ext
         signal.cancelled = true
         updateJob(id, { status: 'done', progress: 100, blob, filename_out, txCount, pages, bank, conversionId, completedAt: Date.now() })
+        track('conversion_complete', { format, surface: 'dashboard', pages, txCount, bank })
         onCompleteRef.current?.()
       } catch (e: any) {
         signal.cancelled = true
+        track('conversion_failed', { format, surface: 'dashboard', reason: 'network_error' })
         updateJob(id, { status: 'error', error: e.message || 'Network error', progress: 0, completedAt: Date.now() })
       }
     })()
