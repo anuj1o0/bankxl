@@ -6,32 +6,13 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ['sharp', 'pdf-parse', 'exceljs'],
   },
-  // Google Search Console showed www.banlxlai.com and banlxlai.com indexed
-  // as two separate pages, splitting ranking signal for every URL on the
-  // site. banlxlai.com (no www) is canonical per lib/site-url.ts — enforce
-  // it with a real 308 redirect so www traffic (and any old bankxlai.com
-  // typo traffic that reaches this app) consolidates onto one host.
-  async redirects() {
-    return [
-      {
-        source: '/:path*',
-        has: [{ type: 'host', value: 'www.banlxlai.com' }],
-        destination: 'https://banlxlai.com/:path*',
-        permanent: true,
-      },
-      {
-        source: '/:path*',
-        has: [{ type: 'host', value: 'bankxlai.com' }],
-        destination: 'https://banlxlai.com/:path*',
-        permanent: true,
-      },
-      {
-        source: '/:path*',
-        has: [{ type: 'host', value: 'www.bankxlai.com' }],
-        destination: 'https://banlxlai.com/:path*',
-        permanent: true,
-      },
-    ]
-  },
+  // NOTE: do NOT add a www<->apex redirect here without first checking
+  // Vercel's dashboard (Project → Settings → Domains). An app-level redirect
+  // here fighting a domain-level redirect already configured in Vercel
+  // creates an infinite loop (ERR_TOO_MANY_REDIRECTS) — that's exactly what
+  // happened on 2026-07-08 when this file redirected www->apex while Vercel
+  // was already redirecting apex->www. Consolidate the www/non-www host at
+  // the Vercel dashboard level instead (it's also faster — happens at the
+  // edge, no function invocation).
 }
 module.exports = nextConfig
