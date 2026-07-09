@@ -16,6 +16,7 @@ interface Result {
   bank: string
   blob: Blob
   filename: string
+  warning?: string
 }
 
 const FORMATS = [
@@ -105,13 +106,15 @@ export default function Converter({ user, freeMode, initialFormat = 'excel', sho
     const pages = parseInt(response.headers.get('X-Pages-Count') || '1')
     const timeMs = parseInt(response.headers.get('X-Processing-Time') || '0')
     const bank = response.headers.get('X-Bank-Name') || ''
+    const warningHeader = response.headers.get('X-Extraction-Warning')
+    const warning = warningHeader ? decodeURIComponent(warningHeader) : undefined
 
     setProgress(100); setActiveStep(3)
     await new Promise(r => setTimeout(r, 300))
 
     const ext = format === 'excel' ? 'xlsx' : format === 'csv' ? 'csv' : format === 'json' ? 'json' : 'xml'
     setResult({
-      txCount, pages, bank,
+      txCount, pages, bank, warning,
       time: (timeMs / 1000).toFixed(1) + 's',
       blob,
       filename: file.name.replace(/\.pdf$/i, '') + '_bankxl.' + ext,
@@ -266,6 +269,11 @@ export default function Converter({ user, freeMode, initialFormat = 'excel', sho
           <p style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 20 }}>
             {result.bank ? `${result.bank} • ` : ''}{result.txCount} transactions from {result.pages} {result.pages === 1 ? 'page' : 'pages'} in {result.time}
           </p>
+          {result.warning && (
+            <div style={{ margin: '0 0 20px', padding: '12px 14px', background: 'var(--warning-bg)', border: '1px solid var(--warning-border)', borderRadius: 10, fontSize: 12.5, color: 'var(--warning)', textAlign: 'left', lineHeight: 1.5 }}>
+              ⚠ {result.warning}
+            </div>
+          )}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 20 }}>
             {[
               { v: result.txCount, l: 'Transactions' },

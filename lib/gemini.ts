@@ -4,7 +4,17 @@
  * Model cascade (fastest → most accurate, each with separate quota pool):
  *   1. gemini-2.5-flash-lite  — fastest, cheapest (primary)
  *   2. gemini-2.5-flash       — more accurate  (fallback 1)
- *   3. gemini-1.5-flash       — legacy, separate quota (fallback 2 / daily-limit escape)
+ *   3. gemini-2.5-pro         — different model tier entirely (fallback 2 —
+ *                               only reached from the sequential retry pass,
+ *                               never the parallel pass, to bound cost; see
+ *                               allowExpensiveModel below)
+ *
+ * NOTE: this used to fall back to `gemini-1.5-flash`, which Google has fully
+ * retired (returns 404 for every request, not a transient error — confirmed
+ * against the live API). If a model in this cascade ever starts 404ing,
+ * check `GET /v1beta/models` with your API key for the current list of
+ * models supporting generateContent before picking a replacement — don't
+ * guess a model name from memory, Google's lineup moves fast.
  *
  * IMPORTANT: Enable Gemini billing at https://aistudio.google.com/app/apikey
  * Free tier: only 20 req/day per model → will hit limit quickly.
@@ -36,11 +46,17 @@ export interface StatementMeta {
 export interface ExtractionResult {
   meta: StatementMeta
   transactions: Transaction[]
+  // Set when a chunked extraction couldn't confirm every page — either a
+  // chunk kept failing after retry, or the extraction deadline was reached
+  // first. The result is still real data, just possibly incomplete; the
+  // caller (route.ts) surfaces this to the user rather than presenting a
+  // partial statement as if it were the whole thing.
+  warning?: string
 }
 
 const MODEL_FAST     = 'gemini-2.5-flash-lite'  // primary — fastest
 const MODEL_ACCURATE = 'gemini-2.5-flash'         // fallback 1
-const MODEL_LEGACY   = 'gemini-1.5-flash'          // fallback 2 — different quota pool
+const MODEL_LEGACY   = 'gemini-2.5-pro'            // fallback 2 — different tier/quota pool
 
 const BASE             = 'https://generativelanguage.googleapis.com/v1beta'
 const INLINE_THRESHOLD = 7 * 1024 * 1024  // 7 MB — use inline below this
@@ -102,10 +118,74 @@ const EMPTY_META: StatementMeta = {
   currency: 'INR', total_pages: null,
 }
 
+// ─── Model circuit breaker ────────────────────────────────────────────────────
+// A statement is usually split into many parallel chunks (extractFromPDFChunked),
+// all of which race to the same model cascade at once. Under a real Gemini
+// capacity crunch, every chunk independently rediscovers "flash-lite is 503
+// right now" via its own trial and error — wasteful, and it eats into the
+// 55s route-level budget. This map remembers which models recently 503'd so
+// later chunks (and the sequential retry pass) can skip straight past them
+// instead of re-attempting a model that's very likely still overloaded a
+// second later. Module-scoped, so it also persists across requests within
+// the same warm serverless instance.
+const modelCooldownUntil = new Map<string, number>()
+const MODEL_COOLDOWN_MS = 20000
+
+function isModelCoolingDown(model: string): boolean {
+  const until = modelCooldownUntil.get(model)
+  return typeof until === 'number' && Date.now() < until
+}
+function markModelOverloaded(model: string) {
+  modelCooldownUntil.set(model, Date.now() + MODEL_COOLDOWN_MS)
+}
+
+// Small per-chunk delay before a parallel chunk fires its first request, so
+// the circuit breaker above gets a chance to help later chunks instead of
+// every chunk in a batch discovering an overloaded model at the same instant.
+function staggered<T>(fn: () => Promise<T>, index: number, stepMs = 250): Promise<T> {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => { fn().then(resolve, reject) }, index * stepMs)
+  })
+}
+
+// Like Promise.allSettled, but if `deadline` passes before every promise has
+// settled, resolves immediately with whatever's known so far instead of
+// waiting for the slowest one. Still-pending entries come back as
+// `undefined`. Without this, one chunk stuck deep in a model cascade during
+// a real Gemini slowdown can block the entire parallel pass well past the
+// route's time budget, discarding every chunk that DID finish in time.
+function allSettledByDeadline<T>(
+  promises: Promise<T>[],
+  deadline?: number
+): Promise<(PromiseSettledResult<T> | undefined)[]> {
+  const results: (PromiseSettledResult<T> | undefined)[] = new Array(promises.length)
+  let remaining = promises.length
+  return new Promise(resolve => {
+    let done = false
+    const finish = () => { if (!done) { done = true; resolve(results) } }
+    if (remaining === 0) { finish(); return }
+    promises.forEach((p, i) => {
+      p.then(
+        value => { results[i] = { status: 'fulfilled', value }; if (--remaining === 0) finish() },
+        reason => { results[i] = { status: 'rejected', reason }; if (--remaining === 0) finish() }
+      )
+    })
+    if (deadline) {
+      const msLeft = deadline - Date.now()
+      setTimeout(finish, Math.max(msLeft, 0))
+    }
+  })
+}
+
 // ─── Retry helper ─────────────────────────────────────────────────────────────
-// Retries on RPM (per-minute) 429s with a backoff delay.
+// Retries on RPM (per-minute) 429s with a short backoff — just enough to
+// smooth over a momentary burst. Deliberately short: each model in the
+// cascade has its own quota pool, so once a request is actually rate-limited
+// it's faster and just as likely to succeed by moving to the next model
+// than by waiting on the same one — and with a 55s route-level budget, a
+// long wait here starves the rest of the cascade.
 // Does NOT retry RPD (daily quota exhausted) — those need a model switch.
-async function withRetry<T>(fn: () => Promise<T>, retries = 2, delayMs = 20000): Promise<T> {
+async function withRetry<T>(fn: () => Promise<T>, retries = 2, delayMs = 3000): Promise<T> {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       return await fn()
@@ -125,15 +205,20 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 2, delayMs = 20000):
 }
 
 // ─── Transient network-error retry ───────────────────────────────────────────
-// Wraps fetch calls. Retries on ECONNRESET, fetch failed, network errors, 502/503/504
-// (not user-initiated aborts and not 4xx errors which are caller bugs).
+// Wraps fetch calls. Retries on ECONNRESET, fetch failed, network errors, and
+// 502/504 (genuine transient gateway blips worth retrying on the SAME
+// endpoint). Deliberately does NOT retry 503 here — Gemini uses 503
+// specifically to mean "this model is overloaded", and the fix for that is
+// switching to a different model (separate capacity), not hammering the
+// same overloaded one. 503s are returned as-is so the caller throws
+// immediately and the model cascade picks the next model right away.
 async function fetchWithRetry(url: string, init: RequestInit, label: string, retries = 2): Promise<Response> {
   let lastErr: any
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const res = await fetch(url, init)
-      // Retry transient gateway errors
-      if (res.status === 502 || res.status === 503 || res.status === 504) {
+      // Retry transient gateway errors (not 503 — see comment above)
+      if (res.status === 502 || res.status === 504) {
         if (attempt < retries) {
           const wait = 800 * (attempt + 1)
           console.warn(`[gemini] ${label} got ${res.status}, retrying in ${wait}ms…`)
@@ -193,7 +278,7 @@ async function callGeminiInline(pdfBuffer: Buffer, apiKey: string, model: string
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
     const msg = err?.error?.message || `HTTP ${res.status}`
-    if (res.status === 429) throw new Error(`RATE_LIMIT: ${msg}`)
+    if (res.status === 429 || res.status === 503) throw new Error(`RATE_LIMIT: ${msg}`)
     if (res.status === 400) throw new Error(`This PDF couldn't be read by AI: ${msg}`)
     throw new Error(`Extraction failed (${res.status}): ${msg}`)
   }
@@ -268,7 +353,7 @@ async function callGeminiFile(pdfBuffer: Buffer, apiKey: string, model: string):
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
     const msg = err?.error?.message || `HTTP ${res.status}`
-    if (res.status === 429) throw new Error(`RATE_LIMIT: ${msg}`)
+    if (res.status === 429 || res.status === 503) throw new Error(`RATE_LIMIT: ${msg}`)
     if (res.status === 400) throw new Error(`This PDF couldn't be read by AI: ${msg}`)
     throw new Error(`Extraction failed (${res.status}): ${msg}`)
   }
@@ -314,9 +399,19 @@ export async function splitPdfIntoChunks(pdfBuffer: Buffer, pagesPerChunk: numbe
 //
 // This way we never silently drop pages — if parallel fails, sequential picks
 // it up. Total time for 20-page PDF: ~15-25s (parallel) + ~0-30s (retries).
+//
+// `deadline` (Date.now()-style timestamp, optional): under a real Gemini
+// capacity crunch, retries can legitimately take longer than the route's
+// hard timeout has left. Rather than let the whole conversion get killed and
+// lose chunks that DID succeed, both the parallel pass and the sequential
+// retry loop respect this deadline and return whatever they have — a real,
+// if possibly incomplete, statement beats no statement at all. The caller
+// (route.ts) is told via `.warning` so it can flag this to the user instead
+// of quietly shipping a statement that's missing pages.
 export async function extractFromPDFChunked(
   pdfBuffer: Buffer,
-  pagesPerChunk: number = 2
+  pagesPerChunk: number = 2,
+  deadline?: number
 ): Promise<ExtractionResult> {
   const tSplit = Date.now()
   const chunks = await splitPdfIntoChunks(pdfBuffer, pagesPerChunk)
@@ -328,8 +423,9 @@ export async function extractFromPDFChunked(
 
   // ─── Pass 1: all chunks in parallel ────────────────────────────────────────
   const tPar = Date.now()
-  const parallelResults = await Promise.allSettled(
-    chunks.map(c => extractFromPDF(c, /* skipRpmRetry */ true))
+  const parallelResults = await allSettledByDeadline(
+    chunks.map((c, i) => staggered(() => extractFromPDF(c, /* skipRpmRetry */ true, /* allowExpensiveModel */ false), i)),
+    deadline
   )
   console.log(`[gemini] parallel pass: ${Date.now() - tPar}ms`)
 
@@ -339,7 +435,10 @@ export async function extractFromPDFChunked(
   const successes: ExtractionResult[] = []
   const needsRetry: number[] = []
   parallelResults.forEach((r, i) => {
-    if (r.status === 'rejected') {
+    if (!r) {
+      needsRetry.push(i)
+      console.warn(`[gemini] parallel chunk ${i + 1} still in flight when the parallel pass deadline hit`)
+    } else if (r.status === 'rejected') {
       needsRetry.push(i)
       console.warn(`[gemini] parallel chunk ${i + 1} failed: ${String(r.reason?.message || r.reason).slice(0, 120)}`)
     } else if (r.value.transactions.length === 0) {
@@ -356,8 +455,12 @@ export async function extractFromPDFChunked(
     const tRetry = Date.now()
     const stillFailed: string[] = []
     for (const i of needsRetry) {
+      if (deadline && Date.now() > deadline) {
+        console.warn(`[gemini] extraction deadline reached — stopping retries early, returning what succeeded so far`)
+        break
+      }
       try {
-        const result = await extractFromPDF(chunks[i], /* skipRpmRetry */ false)
+        const result = await extractFromPDF(chunks[i], /* skipRpmRetry */ false, /* allowExpensiveModel */ true)
         // Even an empty result on retry is "successful" — page may truly have nothing
         successes.push(result)
         if (result.transactions.length > 0) {
@@ -373,13 +476,19 @@ export async function extractFromPDFChunked(
     }
     console.log(`[gemini] sequential retry pass: ${Date.now() - tRetry}ms`)
 
-    if (stillFailed.length > 0 && successes.length === 0) {
-      throw new Error(`All chunks failed: ${stillFailed.join('; ')}`)
+    // Anything neither confirmed successful nor confirmed failed was cut off
+    // by the deadline before it was even attempted.
+    const unresolvedCount = chunks.length - successes.length - stillFailed.length
+    const missingChunks = stillFailed.length + unresolvedCount
+    if (missingChunks > 0 && successes.length === 0) {
+      throw new Error(`All chunks failed: ${stillFailed.join('; ') || 'extraction deadline reached before any chunk completed'}`)
     }
-    if (stillFailed.length > 0) {
-      // Some chunks failed even after retry — proceed with partial results,
-      // but warn user via stderr (visible in Vercel logs).
-      console.warn(`[gemini] ${stillFailed.length}/${chunks.length} chunks failed after retry. Returning partial results.`)
+    if (missingChunks > 0) {
+      const missingPages = missingChunks * pagesPerChunk
+      console.warn(`[gemini] ${missingChunks}/${chunks.length} chunks (~${missingPages} pages) missing from final result.`)
+      const merged = mergeAndClean(successes)
+      merged.warning = `AI service congestion meant roughly ${missingPages} page(s) out of ${chunks.length * pagesPerChunk} could not be confirmed in time. The transactions below are real, but this statement may be incomplete — re-upload to retry if the numbers look short.`
+      return merged
     }
   }
 
@@ -388,10 +497,18 @@ export async function extractFromPDFChunked(
 }
 
 // ─── Main export ──────────────────────────────────────────────────────────────
-// skipRpmRetry: when true (chunked extraction), don't wait 20s on RPM errors
-// — cascade to the next model immediately, since we're parallel and waiting
+// skipRpmRetry: when true (chunked extraction), don't wait on RPM errors —
+// cascade to the next model immediately, since we're parallel and waiting
 // would just blow the AbortSignal timeout.
-export async function extractFromPDF(pdfBuffer: Buffer, skipRpmRetry: boolean = false): Promise<ExtractionResult> {
+// allowExpensiveModel: gates MODEL_LEGACY (gemini-2.5-pro) out of the
+// cascade. Pro costs far more per token than the two Flash models — during
+// a real Gemini capacity crunch, every chunk in the parallel pass hitting
+// 503 on both Flash models would otherwise cascade to Pro *simultaneously*.
+// extractFromPDFChunked passes `false` here for the parallel pass (cheap
+// models only) and only allows Pro for chunks that reach the sequential
+// retry pass — bounding Pro usage to genuinely-stuck chunks retried one at
+// a time, never a stampede of parallel requests.
+export async function extractFromPDF(pdfBuffer: Buffer, skipRpmRetry: boolean = false, allowExpensiveModel: boolean = true): Promise<ExtractionResult> {
   const apiKey = process.env.GEMINI_API_KEY
   if (!apiKey) throw new Error('GEMINI_API_KEY not set. Get a free key at https://aistudio.google.com/app/apikey')
 
@@ -400,17 +517,25 @@ export async function extractFromPDF(pdfBuffer: Buffer, skipRpmRetry: boolean = 
     ? callGeminiInline(pdfBuffer, apiKey, model)
     : callGeminiFile(pdfBuffer, apiKey, model)
 
-  const models = [MODEL_FAST, MODEL_ACCURATE, MODEL_LEGACY]
+  const models = allowExpensiveModel ? [MODEL_FAST, MODEL_ACCURATE, MODEL_LEGACY] : [MODEL_FAST, MODEL_ACCURATE]
 
   for (let i = 0; i < models.length; i++) {
     const model = models[i]
     const isLast = i === models.length - 1
 
+    // Skip a model that a sibling chunk (or an earlier request on this warm
+    // instance) already found overloaded seconds ago — unless it's the last
+    // model, in which case we always have to try something.
+    if (!isLast && isModelCoolingDown(model)) {
+      console.warn(`[gemini] ${model} on cooldown (recently overloaded) — skipping straight to ${models[i + 1]}`)
+      continue
+    }
+
     try {
-      // For single-PDF calls: retry RPM with 20s backoff (1 retry).
+      // For single-PDF calls: retry RPM with a short backoff (1 retry).
       // For chunked calls: no retry — cascade to next model immediately.
       const retries = skipRpmRetry ? 0 : 1
-      const result = await withRetry(() => call(model), retries, /* delayMs= */ 20000)
+      const result = await withRetry(() => call(model), retries, /* delayMs= */ 3000)
 
       if (result.transactions.length > 0) {
         // Try to fix missing bank name via IFSC
@@ -428,6 +553,7 @@ export async function extractFromPDF(pdfBuffer: Buffer, skipRpmRetry: boolean = 
       const isRateLimit = /rate_limit|rate.?limit|quota|resource.?exhausted/i.test(msg)
 
       if (isRateLimit) {
+        if (!isDaily) markModelOverloaded(model)
         if (isLast) {
           // All models exhausted
           throw new Error(

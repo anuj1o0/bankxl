@@ -292,9 +292,15 @@ export async function POST(req: NextRequest) {
   }
 
   // Step 4: extract — chunk large PDFs and run chunks in parallel.
-  // 50s hard timeout keeps 10s buffer for DB writes + Excel build before
-  // Vercel kills the function at maxDuration.
+  // 55s hard timeout is a last-resort safety net; extractFromPDFChunked is
+  // handed an internal deadline well before that (EXTRACTION_BUDGET_MS) so
+  // that under a genuine AI-service slowdown it returns whatever succeeded
+  // so far instead of the whole conversion getting killed and losing chunks
+  // that already completed. 10s buffer keeps room for DB writes + Excel
+  // build before Vercel kills the function at maxDuration.
   const tExtract = Date.now()
+  const EXTRACTION_BUDGET_MS = 42000
+  const extractionDeadline = tExtract + EXTRACTION_BUDGET_MS
   let extracted: ExtractionResult
   try {
     // Small PDFs (≤ 6 pages) → single Gemini call, no chunking.
@@ -304,7 +310,7 @@ export async function POST(req: NextRequest) {
     const CHUNK_THRESHOLD = 6
     const PAGES_PER_CHUNK = 2
     const extractor = pageCount > CHUNK_THRESHOLD
-      ? extractFromPDFChunked(fileBuffer, PAGES_PER_CHUNK)
+      ? extractFromPDFChunked(fileBuffer, PAGES_PER_CHUNK, extractionDeadline)
       : extractFromPDF(fileBuffer)
 
     extracted = await Promise.race([
@@ -313,7 +319,7 @@ export async function POST(req: NextRequest) {
         setTimeout(() => reject(new Error('AI extraction timed out. Try a smaller PDF or split it into months.')), 55000)
       ),
     ])
-    console.log(`[convert] extraction: ${Date.now() - tExtract}ms (${extracted.transactions.length} tx, ${pageCount} pages)`)
+    console.log(`[convert] extraction: ${Date.now() - tExtract}ms (${extracted.transactions.length} tx, ${pageCount} pages${extracted.warning ? ', PARTIAL' : ''})`)
   } catch (err: any) {
     console.error(`[convert] extraction failed after ${Date.now() - tExtract}ms:`, err.message)
     await updateConversion(convId, {
@@ -336,6 +342,10 @@ export async function POST(req: NextRequest) {
   }
 
   const merged = mergeAndClean([extracted])
+  // mergeAndClean builds a fresh { meta, transactions } object and doesn't
+  // know about `.warning` — carry it over so a partial-extraction notice
+  // set upstream (extractFromPDFChunked) isn't silently dropped here.
+  if (extracted.warning) merged.warning = extracted.warning
 
   // Last-resort bank name from filename if AI + IFSC both failed.
   if (!merged.meta.bank_name) {
@@ -358,11 +368,11 @@ export async function POST(req: NextRequest) {
   let outputBuffer: Buffer
   try {
     if (format === 'excel') {
-      outputBuffer = await generateExcel(merged.transactions, merged.meta, { brandName })
+      outputBuffer = await generateExcel(merged.transactions, merged.meta, { brandName, warning: merged.warning })
     } else if (format === 'csv') {
       outputBuffer = Buffer.from(toCSV(merged.transactions), 'utf8')
     } else if (format === 'json') {
-      outputBuffer = Buffer.from(toJSON(merged.transactions, merged.meta), 'utf8')
+      outputBuffer = Buffer.from(toJSON(merged.transactions, merged.meta, merged.warning), 'utf8')
     } else {
       outputBuffer = Buffer.from(toTallyXML(merged.transactions, merged.meta), 'utf8')
     }
@@ -402,17 +412,19 @@ export async function POST(req: NextRequest) {
   const { mime, ext } = FORMAT_INFO[format]
   const filename = `${baseFilename}_bankxl.${ext}`
 
-  return new NextResponse(new Uint8Array(outputBuffer), {
-    status: 200,
-    headers: {
-      'Content-Type': mime,
-      'Content-Disposition': `attachment; filename="${filename}"`,
-      'X-Transactions-Count': String(merged.transactions.length),
-      'X-Pages-Count': String(pageCount),
-      'X-Processing-Time': String(processingTime),
-      'X-Bank-Name': merged.meta.bank_name || '',
-      'X-Conversion-Id': convId || '',
-      'Cache-Control': 'no-store',
-    },
-  })
+  const headers: Record<string, string> = {
+    'Content-Type': mime,
+    'Content-Disposition': `attachment; filename="${filename}"`,
+    'X-Transactions-Count': String(merged.transactions.length),
+    'X-Pages-Count': String(pageCount),
+    'X-Processing-Time': String(processingTime),
+    'X-Bank-Name': merged.meta.bank_name || '',
+    'X-Conversion-Id': convId || '',
+    'Cache-Control': 'no-store',
+  }
+  if (merged.warning) {
+    headers['X-Extraction-Warning'] = encodeURIComponent(merged.warning)
+  }
+
+  return new NextResponse(new Uint8Array(outputBuffer), { status: 200, headers })
 }
