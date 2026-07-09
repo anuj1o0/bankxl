@@ -18,6 +18,7 @@ export interface Job {
   txCount?: number
   pages?: number
   bank?: string
+  warning?: string
   conversionId?: string
   downloaded?: boolean
 }
@@ -108,10 +109,12 @@ export function ConversionsProvider({ children, onComplete }: { children: ReactN
         const pages = parseInt(res.headers.get('X-Pages-Count') || '1')
         const bank = res.headers.get('X-Bank-Name') || ''
         const conversionId = res.headers.get('X-Conversion-Id') || ''
+        const warningHeader = res.headers.get('X-Extraction-Warning')
+        const warning = warningHeader ? decodeURIComponent(warningHeader) : undefined
         const ext = format === 'excel' ? 'xlsx' : format === 'csv' ? 'csv' : format === 'json' ? 'json' : 'xml'
         const filename_out = file.name.replace(/\.pdf$/i, '') + '_bankxl.' + ext
         signal.cancelled = true
-        updateJob(id, { status: 'done', progress: 100, blob, filename_out, txCount, pages, bank, conversionId, completedAt: Date.now() })
+        updateJob(id, { status: 'done', progress: 100, blob, filename_out, txCount, pages, bank, warning, conversionId, completedAt: Date.now() })
         track('conversion_complete', { format, surface: 'dashboard', pages, txCount, bank })
         onCompleteRef.current?.()
       } catch (e: any) {

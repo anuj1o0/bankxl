@@ -273,6 +273,11 @@ export default function InAppConverter() {
           <p style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 24 }}>
             {myJob.bank ? `${myJob.bank} · ` : ''}every transaction extracted and formatted
           </p>
+          {myJob.warning && (
+            <div style={{ margin: '0 0 20px', padding: '12px 14px', background: 'var(--warning-bg)', border: '1px solid var(--warning-border)', borderRadius: 10, fontSize: 12.5, color: 'var(--warning)', textAlign: 'left', lineHeight: 1.5 }}>
+              ⚠ {myJob.warning}
+            </div>
+          )}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 24 }}>
             {[
               { v: myJob.txCount, l: 'Transactions' },

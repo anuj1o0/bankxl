@@ -20,7 +20,7 @@ export function toCSV(transactions: Transaction[]): string {
   return [head.join(','), ...rows].join('\r\n')
 }
 
-export function toJSON(transactions: Transaction[], meta: StatementMeta): string {
+export function toJSON(transactions: Transaction[], meta: StatementMeta, warning?: string): string {
   let totalDebit = 0
   let totalCredit = 0
   for (const t of transactions) {
@@ -35,6 +35,7 @@ export function toJSON(transactions: Transaction[], meta: StatementMeta): string
       total_credit: totalCredit,
       net_flow: totalCredit - totalDebit,
     },
+    ...(warning ? { data_completeness_warning: warning } : {}),
     transactions: transactions.map((t, i) => ({
       sno: i + 1,
       ...t,
