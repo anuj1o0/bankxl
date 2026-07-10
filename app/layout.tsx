@@ -67,10 +67,23 @@ export const metadata: Metadata = {
       'max-video-preview': -1,
     },
   },
+  // SVG-only favicons don't render in a lot of real-world contexts that
+  // matter for a link's "logo" — WhatsApp/LinkedIn/Slack link-preview
+  // crawlers, Google's favicon next to search results, older browsers, and
+  // "Add to Home Screen" all expect PNG/ICO. Full fallback set generated
+  // from app/favicon.svg (same mark used in components/Logo.tsx).
   icons: {
-    icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }],
-    shortcut: '/favicon.svg',
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/icon-16.png', type: 'image/png', sizes: '16x16' },
+      { url: '/icon-32.png', type: 'image/png', sizes: '32x32' },
+      { url: '/icon-192.png', type: 'image/png', sizes: '192x192' },
+    ],
+    shortcut: '/favicon.ico',
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
   },
+  manifest: '/site.webmanifest',
   // Uncomment and fill in after verifying site in Google Search Console:
   // verification: { google: 'YOUR_VERIFICATION_CODE_HERE' },
 }
@@ -90,7 +103,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     '@type': 'Organization',
     name: 'BankXL',
     url: APP_URL,
-    logo: `${APP_URL}/favicon.svg`,
+    // Google's structured-data guidelines require a raster logo (min
+    // 112x112) — SVG isn't supported here even though it's fine for the
+    // HTML <link rel="icon">, which is why this used favicon.svg before and
+    // likely wasn't rendering in Search's Knowledge Panel / rich results.
+    logo: `${APP_URL}/icon-512.png`,
     description: 'AI-powered bank statement PDF to Excel converter for Indian CAs and accountants.',
     contactPoint: {
       '@type': 'ContactPoint',
