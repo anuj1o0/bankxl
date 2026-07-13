@@ -26,7 +26,9 @@ export interface PersonaPageData {
   painPoints: string[]        // "Stop doing X" bullets
   workflows: { title: string; before: string; after: string }[]
   features: { title: string; desc: string; big?: boolean }[]
-  testimonial: { text: string; name: string; role: string }
+  // Omit for personas/regions where we don't have a real, attributable quote —
+  // a fabricated named testimonial is a genuine FTC/Google-structured-data risk.
+  testimonial?: { text: string; name: string; role: string }
   faqs: { q: string; a: string }[]
   proofPoints: string[]        // trust-signal chips shown near hero CTA
 }
@@ -643,6 +645,80 @@ export const PERSONA_PAGES: Record<string, PersonaPageData> = {
         a: 'Scanned and image-based PDFs are supported at 95%+ accuracy, so an older-style passbook scan still converts cleanly.' },
       { q: 'Is my business\'s financial data kept private?',
         a: 'Yes. Files are processed in memory and deleted immediately after conversion — nothing is stored long-term or shared with anyone.' },
+    ],
+  },
+
+  // ─── US Accountants / CPAs / Bookkeepers ───────────────────────────────────
+  'us-accountants': {
+    slug: 'us-accountants',
+    persona: 'US Accountants & Bookkeepers',
+    personaShort: 'accountants',
+    primaryKeyword: 'bank statement converter for accountants',
+    metaTitle: 'Bank Statement to Excel Converter for US Accountants & CPAs',
+    metaDescription: 'Convert Chase, Bank of America, Wells Fargo, Citi and Capital One statement PDFs to Excel or QuickBooks-ready CSV in 15 seconds. Built for US accountants and bookkeepers. Starts at $8/mo — free 50 pages to try.',
+    keywords: [
+      'bank statement converter for accountants', 'bank statement pdf to excel for cpa',
+      'convert bank statement to quickbooks', 'bank statement to csv for bookkeeping',
+      'chase statement to excel for accountants', 'pdf bank statement converter usa',
+      'bank statement ocr for accounting firms', 'bookkeeping automation bank statements',
+    ],
+    hero: {
+      kicker: 'BUILT FOR US ACCOUNTANTS & BOOKKEEPERS',
+      h1Prefix: 'Stop retyping',
+      h1Highlight: 'Chase and Bank of America statements',
+      h1Suffix: 'into a spreadsheet.',
+      subhead: 'Upload any US bank statement PDF and get a clean Excel file or QuickBooks/Xero-ready CSV in 15 seconds — with debits and credits split, dates normalized, and running balance preserved. No card needed to try 50 pages a month.',
+    },
+    proofPoints: ['Works with Chase, BofA, Wells Fargo, Citi & Capital One', 'Plans from $8/mo', 'No data retained after conversion'],
+    painPoints: [
+      'Stop manually keying in every line of a client\'s Chase or Wells Fargo statement',
+      'Skip re-typing PDF statements just to get a CSV your bookkeeping software accepts',
+      'End the copy-paste-and-reformat routine every time a new client sends a PDF instead of a bank feed',
+      'Get staff off data entry during month-end close and tax season',
+    ],
+    workflows: [
+      { title: 'Monthly bookkeeping close',
+        before: 'Client emails a PDF statement → you open it, type 100-300 rows into a spreadsheet, fix formatting, then import.',
+        after: 'Upload the PDF to BankXL → download a clean Excel or CSV with debit/credit columns and running balance → import in minutes.' },
+      { title: 'QuickBooks / Xero import when there\'s no bank feed',
+        before: 'Some banks or account types don\'t support a live feed, so you\'re stuck typing transactions by hand.',
+        after: 'Export the statement as CSV, formatted for a standard bank-transaction import — drop it straight into QuickBooks Online, QuickBooks Desktop, or Xero.' },
+      { title: 'Onboarding a new client with a year of history',
+        before: 'Twelve monthly PDFs across two or three accounts — days of manual entry before you can even start reconciling.',
+        after: 'Batch-upload every statement, convert in parallel, and start reconciling the same day.' },
+      { title: 'Tax season document prep',
+        before: 'Clients send scanned or downloaded statements as PDFs; you retype relevant transactions for schedules and worksheets.',
+        after: 'Convert to Excel or JSON and pull exactly the transactions you need without re-keying anything.' },
+    ],
+    features: [
+      { title: 'QuickBooks & Xero-ready CSV export', big: true,
+        desc: 'Download a standard CSV formatted for QuickBooks Online, QuickBooks Desktop, and Xero bank-transaction import — no manual column mapping or reformatting needed.' },
+      { title: 'Priced for solo bookkeepers and small firms', big: true,
+        desc: 'Free plan covers 50 pages a month. Pro is $8/mo for 800 pages — a fraction of what enterprise document-AI platforms like Nanonets or Docsumo charge for comparable volume.' },
+      { title: 'Works with every major US bank',
+        desc: 'Chase, Bank of America, Wells Fargo, Citibank, Capital One, U.S. Bank, and hundreds more regional and community banks.' },
+      { title: 'Excel, CSV, or JSON output',
+        desc: 'Excel with color-coded debits/credits and a summary sheet, CSV for any bookkeeping tool, or JSON if you\'re building your own pipeline.' },
+      { title: 'Scanned statements supported',
+        desc: 'Faxed or scanned PDFs, older statement formats, and image-based files convert at 95%+ accuracy using AI-based extraction.' },
+      { title: 'Nothing is retained',
+        desc: 'Statements are processed in memory and discarded after conversion. No long-term storage, no data used for training, no sharing with third parties.' },
+    ],
+    faqs: [
+      { q: 'How is BankXL different from Nanonets or Docsumo?',
+        a: 'Nanonets and Docsumo are general-purpose document-AI platforms priced for enterprise volume, often with per-page or per-workflow pricing that adds up fast for a solo bookkeeper or small firm. BankXL is purpose-built for one job — bank statement PDFs — and starts at $8/mo for 800 pages, with a free tier to test output quality before you pay anything.' },
+      { q: 'Can I import the output directly into QuickBooks or Xero?',
+        a: 'Yes. Choose the CSV export, which is formatted as a standard bank-transaction file that QuickBooks Online, QuickBooks Desktop, and Xero all accept for manual bank statement import.' },
+      { q: 'Which US banks are supported?',
+        a: 'Chase, Bank of America, Wells Fargo, Citibank, Capital One, U.S. Bank, and hundreds of regional and community banks. If a statement doesn\'t convert cleanly, email support@banlxlai.com and we\'ll tune it.' },
+      { q: 'Is there a free plan to test accuracy first?',
+        a: 'Yes — 50 pages every month with no credit card required. Convert a couple of real client statements and check the output before committing to a paid plan.' },
+      { q: 'How accurate is the conversion?',
+        a: 'Digitally generated bank PDFs convert at 99.5%+ accuracy. Scanned or image-based statements run at 95%+. We recommend a quick balance check against the statement total before finalizing books.' },
+      { q: 'Is client financial data kept secure?',
+        a: 'Files are processed over encrypted connections and deleted after conversion — nothing is retained, shared, or used to train any model. Email support@banlxlai.com if you need details for a client engagement letter.' },
+      { q: 'Do you support bulk upload for multiple clients?',
+        a: 'Yes. The Firm plan supports batch upload so you can convert statements for several clients or accounts in one pass instead of one at a time.' },
     ],
   },
 }

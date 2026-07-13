@@ -170,7 +170,9 @@ export default function BankPage({ params }: Props) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
             {data.formats.map((f, i) => {
               const icons = ['📊', '📄', '🔧', '📁']
-              const labels = ['Best for Excel / accounting', 'Import into any tool', 'For developers / APIs', 'Direct Tally import']
+              const labels = data.country === 'US'
+                ? ['Best for Excel / accounting', 'Import into any tool', 'For developers / APIs', 'For accounting software import']
+                : ['Best for Excel / accounting', 'Import into any tool', 'For developers / APIs', 'Direct Tally import']
               return (
                 <div key={f} style={{ background: i === 0 ? 'var(--accent-bg)' : 'var(--surface)', border: `1px solid ${i === 0 ? 'var(--accent-border)' : 'var(--border)'}`, borderRadius: 12, padding: '16px 18px' }}>
                   <div style={{ fontSize: 20, marginBottom: 8 }}>{icons[i] || '📄'}</div>
@@ -184,7 +186,11 @@ export default function BankPage({ params }: Props) {
             <span style={{ color: 'var(--text-muted)' }}>Deep-dive by format:</span>
             <Link href="/convert/bank-statement-to-excel" style={{ color: 'var(--accent)', textDecoration: 'none' }}>{data.shortName} → Excel guide</Link>
             <span style={{ color: 'var(--text-faint)' }}>·</span>
-            <Link href="/convert/bank-statement-to-tally" style={{ color: 'var(--accent)', textDecoration: 'none' }}>{data.shortName} → Tally XML</Link>
+            {data.country === 'US' ? (
+              <Link href="/convert/bank-statement-to-csv" style={{ color: 'var(--accent)', textDecoration: 'none' }}>{data.shortName} → QuickBooks CSV</Link>
+            ) : (
+              <Link href="/convert/bank-statement-to-tally" style={{ color: 'var(--accent)', textDecoration: 'none' }}>{data.shortName} → Tally XML</Link>
+            )}
             <span style={{ color: 'var(--text-faint)' }}>·</span>
             <Link href="/convert/bank-statement-to-csv" style={{ color: 'var(--accent)', textDecoration: 'none' }}>{data.shortName} → CSV</Link>
           </div>
@@ -230,7 +236,12 @@ export default function BankPage({ params }: Props) {
         <section style={{ marginTop: 48 }}>
           <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16, color: 'var(--text-dim)' }}>Also convert statements from:</h3>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {ALL_BANK_SLUGS.filter(s => s !== params.bank).slice(0, 8).map(slug => {
+            {(() => {
+              const others = ALL_BANK_SLUGS.filter(s => s !== params.bank)
+              const sameCountry = others.filter(s => BANK_PAGES[s].country === data.country)
+              const rest = others.filter(s => BANK_PAGES[s].country !== data.country)
+              return [...sameCountry, ...rest].slice(0, 8)
+            })().map(slug => {
               const b = BANK_PAGES[slug]
               return (
                 <Link key={slug} href={`/banks/${slug}`} style={{ fontSize: 13, padding: '6px 14px', borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-dim)', textDecoration: 'none' }}>
@@ -245,13 +256,18 @@ export default function BankPage({ params }: Props) {
         <section style={{ marginTop: 32 }}>
           <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16, color: 'var(--text-dim)' }}>Built for how you actually use it:</h3>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {[
+            {(data.country === 'US' ? [
+              { href: '/for/us-accountants', label: 'For US Accountants & CPAs' },
+              { href: '/use-cases/bank-reconciliation', label: 'Bank Reconciliation Guide' },
+              { href: '/pricing', label: 'See Pricing ($8/mo)' },
+              { href: '/compare/bankxl-vs-nanonets', label: 'BankXL vs Nanonets' },
+            ] : [
               { href: '/for/chartered-accountants', label: 'For Chartered Accountants' },
               { href: '/use-cases/bank-reconciliation', label: 'Bank Reconciliation Guide' },
               { href: '/convert/bank-statement-to-tally', label: 'Export to Tally XML' },
               { href: '/compare/bankxl-vs-nanonets', label: 'BankXL vs Nanonets' },
               { href: '/blog/how-to-import-bank-statement-in-tally-prime', label: 'Tally Prime Import Guide' },
-            ].map(l => (
+            ]).map(l => (
               <Link key={l.href} href={l.href} style={{ fontSize: 13, padding: '6px 14px', borderRadius: 8, background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', color: 'var(--accent)', textDecoration: 'none' }}>
                 {l.label}
               </Link>
