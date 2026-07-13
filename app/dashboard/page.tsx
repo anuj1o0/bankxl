@@ -11,6 +11,7 @@ import Onboarding from '@/components/dashboard/Onboarding'
 import BankIcon from '@/components/BankIcon'
 import TopupButton from '@/components/dashboard/TopupButton'
 import AnimatedNumber from '@/components/AnimatedNumber'
+import { track } from '@/lib/track'
 
 const SI = {
   pages: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></>,
@@ -45,7 +46,14 @@ function DashboardHome() {
   const remainingDisplay = pagesRemaining.toLocaleString('en-IN')
   const isFirstUse = conversions.length === 0
   const usagePct = pagesEffectiveLimit > 0 ? (pagesUsed / pagesEffectiveLimit) * 100 : 0
+  // Paid users nearing their (larger) monthly allowance get a top-up nudge.
+  // Free users get their own nudge at the SAME 75% threshold — previously
+  // this only fired for isPaid, so a free user could burn through their
+  // whole 50-page allowance every month and never see an upgrade prompt at
+  // the one moment they have the most reason to pay (they're about to be
+  // blocked). See showFreeUpgradeBanner below.
   const showTopupBanner = isPaid && usagePct >= 75 && pagesRemaining < 200
+  const showFreeUpgradeBanner = !isPaid && usagePct >= 75
   const successCount = conversions.filter(c => c.status === 'success').length
 
   return (
@@ -88,6 +96,33 @@ function DashboardHome() {
               </div>
             </div>
             <TopupButton variant="primary" />
+          </div>
+        )}
+
+        {showFreeUpgradeBanner && (
+          <div style={{ padding: 16, marginBottom: 22, background: 'linear-gradient(120deg, var(--accent-bg), var(--warning-bg))', border: '1px solid var(--accent-border)', borderRadius: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ fontSize: 22 }}>{pagesRemaining === 0 ? '🚫' : '⚡'}</span>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600 }}>
+                  {pagesRemaining === 0
+                    ? "You've used all 50 free pages this month"
+                    : `Only ${pagesRemaining} free page${pagesRemaining === 1 ? '' : 's'} left this month`}
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>
+                  {pagesRemaining === 0
+                    ? 'Buy 60 more pages for ₹100, or go Pro for 800 pages/month + Tally, CSV & JSON export.'
+                    : 'Top up now so a conversion never gets cut off, or upgrade to Pro for 800 pages/month.'}
+                </div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <TopupButton variant="secondary" />
+              <Link href="/pricing" onClick={() => track('upgrade_nudge_clicked', { source: 'dashboard_free_banner', pagesRemaining })}
+                style={{ padding: '10px 18px', background: 'var(--accent)', color: 'var(--on-accent)', borderRadius: 9, fontSize: 13, fontWeight: 600, textDecoration: 'none', boxShadow: 'var(--shadow-glow)' }}>
+                See Pro plans →
+              </Link>
+            </div>
           </div>
         )}
 

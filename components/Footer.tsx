@@ -22,6 +22,7 @@ export default function Footer() {
     {
       title: 'For', links: [
         ['Chartered Accountants', '/for/chartered-accountants'],
+        ['US Accountants & CPAs', '/for/us-accountants'],
         ['Loan Consultants', '/for/loan-consultants'],
         ['Bank Reconciliation', '/use-cases/bank-reconciliation'],
         ['Blog & guides', '/blog'],

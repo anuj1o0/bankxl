@@ -96,6 +96,12 @@ const RELATED_LINKS: Record<string, { href: string; label: string }[]> = {
     { href: '/banks/hdfc', label: 'HDFC Statement Converter' },
     { href: '/convert/bank-statement-to-excel', label: 'Convert to Excel' },
   ],
+  'us-accountants': [
+    { href: '/banks/chase', label: 'Chase Statement Converter' },
+    { href: '/banks/bank-of-america', label: 'Bank of America Converter' },
+    { href: '/use-cases/bank-reconciliation', label: 'Bank Reconciliation Guide' },
+    { href: '/compare/bankxl-vs-nanonets', label: 'BankXL vs Nanonets' },
+  ],
   default: [
     { href: '/use-cases/bank-reconciliation', label: 'Bank Reconciliation Guide' },
     { href: '/banks', label: 'All Supported Banks' },
@@ -126,20 +132,20 @@ export default function PersonaPage({ params }: Props) {
     })),
   }
 
-  const reviewLD = {
+  const reviewLD = data.testimonial ? {
     '@context': 'https://schema.org',
     '@type': 'Review',
     itemReviewed: { '@type': 'SoftwareApplication', name: 'BankXL' },
     author: { '@type': 'Person', name: data.testimonial.name },
     reviewBody: data.testimonial.text,
     reviewRating: { '@type': 'Rating', ratingValue: '5', bestRating: '5' },
-  }
+  } : null
 
   return (
     <div className="grid-bg" style={{ minHeight: '100vh', background: 'var(--bg)', overflowX: 'hidden' }}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLD) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLD) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(reviewLD) }} />
+      {reviewLD && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(reviewLD) }} />}
 
       <div className="glow-blob" style={{ top: -220, right: -120 }} />
       <div className="glow-blob" style={{ top: 480, left: -320, background: 'radial-gradient(circle, var(--accent-2-glow) 0%, transparent 70%)' }} />
@@ -253,29 +259,31 @@ export default function PersonaPage({ params }: Props) {
         </section>
 
         {/* ─── Testimonial ──────────────────────────────────────────────── */}
-        <section style={{ marginBottom: 72 }}>
-          <div className="card" style={{
-            padding: 'clamp(30px, 4vw, 48px)', borderRadius: 22,
-            background: 'linear-gradient(140deg, var(--accent-bg), var(--info-bg))',
-            borderColor: 'var(--accent-border)',
-            position: 'relative', overflow: 'hidden',
-          }}>
-            <div aria-hidden style={{ position: 'absolute', top: -40, right: -40, width: 220, height: 220, borderRadius: '50%', background: 'radial-gradient(circle, var(--accent-glow), transparent 70%)' }} />
-            <div style={{ position: 'relative', color: 'var(--accent)', marginBottom: 14 }}>{I.quote}</div>
-            <blockquote className="display" style={{ position: 'relative', fontSize: 'clamp(20px, 2.6vw, 26px)', fontWeight: 500, lineHeight: 1.4, letterSpacing: '-0.015em', color: 'var(--text-strong)', margin: 0, marginBottom: 20 }}>
-              "{data.testimonial.text}"
-            </blockquote>
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div className="display" style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--gradient-brand)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 16 }}>
-                {data.testimonial.name[0]}
-              </div>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 600 }}>{data.testimonial.name}</div>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{data.testimonial.role}</div>
+        {data.testimonial && (
+          <section style={{ marginBottom: 72 }}>
+            <div className="card" style={{
+              padding: 'clamp(30px, 4vw, 48px)', borderRadius: 22,
+              background: 'linear-gradient(140deg, var(--accent-bg), var(--info-bg))',
+              borderColor: 'var(--accent-border)',
+              position: 'relative', overflow: 'hidden',
+            }}>
+              <div aria-hidden style={{ position: 'absolute', top: -40, right: -40, width: 220, height: 220, borderRadius: '50%', background: 'radial-gradient(circle, var(--accent-glow), transparent 70%)' }} />
+              <div style={{ position: 'relative', color: 'var(--accent)', marginBottom: 14 }}>{I.quote}</div>
+              <blockquote className="display" style={{ position: 'relative', fontSize: 'clamp(20px, 2.6vw, 26px)', fontWeight: 500, lineHeight: 1.4, letterSpacing: '-0.015em', color: 'var(--text-strong)', margin: 0, marginBottom: 20 }}>
+                "{data.testimonial.text}"
+              </blockquote>
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div className="display" style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--gradient-brand)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 16 }}>
+                  {data.testimonial.name[0]}
+                </div>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 600 }}>{data.testimonial.name}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{data.testimonial.role}</div>
+                </div>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* ─── FAQ ──────────────────────────────────────────────────────── */}
         <section style={{ marginBottom: 72 }}>

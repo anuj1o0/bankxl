@@ -10,6 +10,8 @@ export interface BankPageData {
   faqs: { q: string; a: string }[]
   steps: string[]
   formats: string[]
+  // US banks skip the Tally-specific cross-links (Tally is India-only accounting software)
+  country?: 'US'
 }
 
 export const BANK_PAGES: Record<string, BankPageData> = {
@@ -801,6 +803,129 @@ export const BANK_PAGES: Record<string, BankPageData> = {
       { q: 'How do I download my Jana SFB statement?', a: 'Use the Jana mobile app → Accounts → e-Statement → Download. Or internet banking → Accounts → Statement → select period → Download PDF.' },
       { q: 'Does BankXL work with Jana microfinance loan statements?', a: 'Yes — microfinance and business loan account statements are supported alongside savings and current accounts.' },
       { q: 'Can I convert Jana statements for Tally import?', a: 'Yes — Tally XML export lets you import transactions as vouchers directly into Tally Prime or ERP 9.' },
+    ],
+  },
+
+  chase: {
+    slug: 'chase',
+    name: 'Chase Bank',
+    shortName: 'Chase',
+    tagline: 'Convert Chase bank statement PDF to Excel instantly',
+    metaDescription: 'Convert your Chase (JPMorgan Chase) bank statement PDF to Excel or CSV in 15 seconds. Works with Chase online banking and mobile app statements. Free to try — no credit card needed.',
+    keywords: ['chase bank statement to excel', 'chase statement pdf to excel', 'convert chase bank statement', 'chase bank statement converter', 'jpmorgan chase statement excel', 'chase statement to csv'],
+    country: 'US',
+    color: '#117aca',
+    statementFeatures: ['Chase online banking e-statements', 'Chase Mobile app statements', 'Chase checking account statements', 'Chase savings account statements', 'Chase business banking statements', 'Chase Sapphire & credit card statements', 'Multi-year Chase statements'],
+    steps: ['Download your Chase statement from chase.com or the Chase Mobile app', 'Upload the PDF to BankXL', 'Get a clean Excel or CSV with every transaction in 15 seconds'],
+    formats: ['Excel (.xlsx) with color-coded debits/credits', 'CSV for QuickBooks, Xero or Excel import', 'JSON for developers', 'XML for accounting software import'],
+    faqs: [
+      { q: 'How do I download my Chase bank statement?', a: 'Log into chase.com → Accounts → select account → Statements & Documents → choose a period → Download PDF. Or use the Chase Mobile app → Account → Statements.' },
+      { q: 'Can I import my Chase statement into QuickBooks?', a: 'Yes. Export as CSV and import directly into QuickBooks Online, QuickBooks Desktop, Xero, or any bookkeeping software that accepts CSV bank feeds.' },
+      { q: 'Does BankXL work with Chase business banking statements?', a: 'Yes — Chase Business Complete Banking, Chase Total Business Checking, and Chase business credit card statements all convert cleanly.' },
+      { q: 'How accurate is the Chase statement conversion?', a: 'For digitally generated Chase PDFs, accuracy is 99.5%+. We recommend a quick spot-check against your closing balance before filing.' },
+      { q: 'Is my Chase statement data secure?', a: 'Yes. Files are processed over encrypted connections and not retained after conversion. See our privacy policy for full details.' },
+    ],
+  },
+
+  'bank-of-america': {
+    slug: 'bank-of-america',
+    name: 'Bank of America',
+    shortName: 'Bank of America',
+    tagline: 'Convert Bank of America statement PDF to Excel instantly',
+    metaDescription: 'Convert your Bank of America statement PDF to Excel or CSV in 15 seconds. Works with Online Banking and Mobile Banking app statements. Free to try — no credit card needed.',
+    keywords: ['bank of america statement to excel', 'bofa statement pdf to excel', 'convert bank of america statement', 'bank of america statement converter', 'bofa statement to csv', 'boa statement to excel'],
+    country: 'US',
+    color: '#e31837',
+    statementFeatures: ['Bank of America Online Banking e-statements', 'Bank of America Mobile Banking app statements', 'BofA checking account statements', 'BofA savings account statements', 'Bank of America small business statements', 'Merrill-linked account statements', 'Multi-year BofA statements'],
+    steps: ['Download your statement from Online Banking or the Mobile Banking app', 'Upload the PDF to BankXL', 'Get a clean Excel or CSV with every transaction in 15 seconds'],
+    formats: ['Excel (.xlsx) with color-coded debits/credits', 'CSV for QuickBooks, Xero or Excel import', 'JSON for developers', 'XML for accounting software import'],
+    faqs: [
+      { q: 'How do I download my Bank of America statement?', a: 'Log into Online Banking → Accounts → select account → Statements & Documents → choose a period → Download PDF. Or in the Mobile Banking app → Menu → Statements.' },
+      { q: 'Can I import my Bank of America statement into accounting software?', a: 'Yes. Export as CSV and import directly into QuickBooks, Xero, Wave, or any bookkeeping tool that accepts CSV bank statements.' },
+      { q: 'Does BankXL work with Bank of America small business statements?', a: 'Yes — Business Advantage checking and savings statements convert with the same accuracy as personal accounts.' },
+      { q: 'How accurate is the Bank of America statement conversion?', a: 'Digitally generated BofA PDFs convert at 99.5%+ accuracy. Always do a quick balance check before final use.' },
+      { q: 'Does BankXL keep a copy of my statement?', a: 'No. Statements are processed and discarded — we don\'t retain your financial documents after conversion.' },
+    ],
+  },
+
+  'wells-fargo': {
+    slug: 'wells-fargo',
+    name: 'Wells Fargo',
+    shortName: 'Wells Fargo',
+    tagline: 'Convert Wells Fargo statement PDF to Excel instantly',
+    metaDescription: 'Convert your Wells Fargo bank statement PDF to Excel or CSV in 15 seconds. Works with Wells Fargo Online and mobile app statements. Free to try — no credit card needed.',
+    keywords: ['wells fargo statement to excel', 'wells fargo statement pdf to excel', 'convert wells fargo statement', 'wells fargo statement converter', 'wells fargo statement to csv'],
+    country: 'US',
+    color: '#d71e28',
+    statementFeatures: ['Wells Fargo Online e-statements', 'Wells Fargo Mobile app statements', 'Wells Fargo checking account statements', 'Wells Fargo savings account statements', 'Wells Fargo small business statements', 'Multi-year Wells Fargo statements'],
+    steps: ['Download your statement from Wells Fargo Online or the mobile app', 'Upload the PDF to BankXL', 'Get a clean Excel or CSV with every transaction in 15 seconds'],
+    formats: ['Excel (.xlsx) with color-coded debits/credits', 'CSV for QuickBooks, Xero or Excel import', 'JSON for developers', 'XML for accounting software import'],
+    faqs: [
+      { q: 'How do I download my Wells Fargo statement?', a: 'Log into Wells Fargo Online → Accounts → select account → Statements & Documents → Download PDF. Or use the Wells Fargo Mobile app → Menu → Statements.' },
+      { q: 'Can I import my Wells Fargo statement into QuickBooks?', a: 'Yes. Export as CSV and import directly into QuickBooks Online, QuickBooks Desktop, or Xero.' },
+      { q: 'Does BankXL work with Wells Fargo small business statements?', a: 'Yes — Initiate Business Checking, Navigate Business Checking, and business savings statements are all supported.' },
+      { q: 'How accurate is the Wells Fargo statement conversion?', a: 'Digitally generated Wells Fargo PDFs convert at 99.5%+ accuracy. We recommend a quick spot-check before filing.' },
+      { q: 'Is there a limit on how many pages I can convert?', a: 'The free plan includes 50 pages/month. Pro ($8/mo) gives you 800 pages/month — enough for most individuals and small businesses.' },
+    ],
+  },
+
+  'citibank-us': {
+    slug: 'citibank-us',
+    name: 'Citibank (US)',
+    shortName: 'Citi',
+    tagline: 'Convert Citibank US statement PDF to Excel instantly',
+    metaDescription: 'Convert your Citibank US statement PDF to Excel or CSV in 15 seconds. Works with Citi Online and Citi Mobile app statements. Free to try — no credit card needed.',
+    keywords: ['citibank us statement to excel', 'citi statement pdf to excel', 'convert citibank us statement', 'citi statement converter', 'citibank statement to csv'],
+    country: 'US',
+    color: '#002d72',
+    statementFeatures: ['Citibank Online e-statements', 'Citi Mobile app statements', 'Citi checking account statements', 'Citi savings account statements', 'Citi Priority & Citigold statements', 'Citi credit card statements'],
+    steps: ['Download your statement from Citi Online or the Citi Mobile app', 'Upload the PDF to BankXL', 'Get a clean Excel or CSV with every transaction in 15 seconds'],
+    formats: ['Excel (.xlsx) with color-coded debits/credits', 'CSV for QuickBooks, Xero or Excel import', 'JSON for developers', 'XML for accounting software import'],
+    faqs: [
+      { q: 'How do I download my Citibank US statement?', a: 'Log into Citi Online → Accounts → select account → Statements → Download PDF. Or use the Citi Mobile app → Account → Statements.' },
+      { q: 'Can I import my Citibank statement into accounting software?', a: 'Yes. Export as CSV and import directly into QuickBooks, Xero, or any tool that accepts CSV bank statements.' },
+      { q: 'Does BankXL work with Citi Priority or Citigold statements?', a: 'Yes — all Citibank US account tiers convert with the same accuracy.' },
+      { q: 'How accurate is the Citibank statement conversion?', a: 'Digitally generated Citi PDFs convert at 99.5%+ accuracy. Always verify the closing balance before final use.' },
+    ],
+  },
+
+  'capital-one': {
+    slug: 'capital-one',
+    name: 'Capital One',
+    shortName: 'Capital One',
+    tagline: 'Convert Capital One statement PDF to Excel instantly',
+    metaDescription: 'Convert your Capital One bank statement PDF to Excel or CSV in 15 seconds. Works with Capital One online banking and mobile app statements. Free to try — no credit card needed.',
+    keywords: ['capital one statement to excel', 'capital one statement pdf to excel', 'convert capital one statement', 'capital one statement converter', 'capital one statement to csv'],
+    country: 'US',
+    color: '#004977',
+    statementFeatures: ['Capital One online banking e-statements', 'Capital One Mobile app statements', '360 Checking account statements', '360 Performance Savings statements', 'Capital One business banking statements', 'Capital One credit card statements'],
+    steps: ['Download your statement from Capital One online banking or the mobile app', 'Upload the PDF to BankXL', 'Get a clean Excel or CSV with every transaction in 15 seconds'],
+    formats: ['Excel (.xlsx) with color-coded debits/credits', 'CSV for QuickBooks, Xero or Excel import', 'JSON for developers', 'XML for accounting software import'],
+    faqs: [
+      { q: 'How do I download my Capital One statement?', a: 'Log into Capital One online banking → Accounts → select account → Statements & Documents → Download PDF. Or use the Capital One Mobile app → Account → Statements.' },
+      { q: 'Can I import my Capital One statement into QuickBooks?', a: 'Yes. Export as CSV and import directly into QuickBooks, Xero, or Wave.' },
+      { q: 'Does BankXL work with 360 Checking and 360 Performance Savings?', a: 'Yes — all Capital One personal and business account types are supported.' },
+      { q: 'How accurate is the Capital One statement conversion?', a: 'Digitally generated Capital One PDFs convert at 99.5%+ accuracy. We recommend a quick spot-check before filing.' },
+    ],
+  },
+
+  'us-bank': {
+    slug: 'us-bank',
+    name: 'U.S. Bank',
+    shortName: 'U.S. Bank',
+    tagline: 'Convert U.S. Bank statement PDF to Excel instantly',
+    metaDescription: 'Convert your U.S. Bank statement PDF to Excel or CSV in 15 seconds. Works with U.S. Bank online banking and mobile app statements. Free to try — no credit card needed.',
+    keywords: ['us bank statement to excel', 'u.s. bank statement pdf to excel', 'convert us bank statement', 'us bank statement converter', 'us bank statement to csv'],
+    country: 'US',
+    color: '#0c2074',
+    statementFeatures: ['U.S. Bank online banking e-statements', 'U.S. Bank Mobile app statements', 'U.S. Bank checking account statements', 'U.S. Bank savings account statements', 'U.S. Bank small business statements'],
+    steps: ['Download your statement from U.S. Bank online banking or the mobile app', 'Upload the PDF to BankXL', 'Get a clean Excel or CSV with every transaction in 15 seconds'],
+    formats: ['Excel (.xlsx) with color-coded debits/credits', 'CSV for QuickBooks, Xero or Excel import', 'JSON for developers', 'XML for accounting software import'],
+    faqs: [
+      { q: 'How do I download my U.S. Bank statement?', a: 'Log into U.S. Bank online banking → Accounts → select account → Statements → Download PDF. Or use the U.S. Bank Mobile app → Account → Statements.' },
+      { q: 'Can I import my U.S. Bank statement into accounting software?', a: 'Yes. Export as CSV and import directly into QuickBooks, Xero, or any tool that accepts CSV bank statements.' },
+      { q: 'Does BankXL work with U.S. Bank small business statements?', a: 'Yes — Silver Business Checking, Gold Business Checking, and business savings statements are all supported.' },
+      { q: 'How accurate is the U.S. Bank statement conversion?', a: 'Digitally generated U.S. Bank PDFs convert at 99.5%+ accuracy. We recommend a quick spot-check before filing.' },
     ],
   },
 }

@@ -91,10 +91,10 @@ const FAQ = [
   { q: 'Why pages instead of conversions?', a: 'A 1-page statement and a 50-page statement use very different amounts of compute. Charging per page is the fairest way — you pay for what you actually consume. Most CAs find 50 free pages enough to handle 5–10 small statements every month.' },
   { q: 'How many pages does a typical statement have?', a: 'Most monthly statements are 3–8 pages. Quarterly is 8–20. Yearly is 25–60. So Pro\'s 800 pages handles roughly 100 small statements per month, and Firm\'s 8,000 pages handles 1,000+.' },
   { q: 'What if I run out of pages mid-month?', a: 'Buy a top-up: ₹100 (~$1.20) for 60 extra pages. They\'re added to your current month\'s allowance instantly. Top-ups expire on the 1st of next month along with your regular allowance — they don\'t carry over.' },
-  { q: 'What payment methods do you accept?', a: 'For India: UPI, all Indian credit/debit cards, netbanking, and wallets (PhonePe, Paytm, Amazon Pay) via Razorpay. For international users: all major credit/debit cards (Visa, Mastercard, Amex), Apple Pay, Google Pay, and more via Lemon Squeezy.' },
+  { q: 'What payment methods do you accept?', a: 'UPI, all major credit/debit cards (Visa, Mastercard, Amex), netbanking, and wallets (PhonePe, Paytm, Amazon Pay) — via Razorpay, for both Indian and international cards. Prices outside India are shown in USD for clarity; your card is charged the INR equivalent, same as any international purchase.' },
   { q: 'How does auto-renewal work?', a: 'For Pro/Firm subscriptions, your card is charged automatically each month/year. You can cancel anytime from your Billing page and keep access until the end of your billing period.' },
   { q: 'Can I switch plans?', a: 'Yes — go to Billing → "Switch to this" on any plan. Your current subscription stays active until your new payment is confirmed. If you dismiss the window, nothing changes.' },
-  { q: 'Do you generate invoices?', a: 'Yes. Indian users get GST-compliant invoices via Razorpay. International users get invoices via Lemon Squeezy. Email support@banlxlai.com if you need a custom invoice.' },
+  { q: 'Do you generate invoices?', a: 'Yes, GST-compliant invoices via Razorpay for every plan, India or international. Email support@banlxlai.com if you need a custom invoice.' },
   { q: 'Refunds?', a: 'If our tool genuinely doesn\'t work for your statements, email us within 7 days for a full refund. See our refund policy.' },
 ]
 

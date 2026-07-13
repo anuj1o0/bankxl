@@ -5,12 +5,12 @@ import Footer from '@/components/Footer'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Supported Banks — SBI, HDFC, ICICI, Axis, Kotak & 500+ More',
-  description: 'BankXL converts PDF statements from 500+ banks: SBI, HDFC, ICICI, Axis, Kotak, PNB, Canara, Bank of Baroda, IDFC First, IndusInd, Yes Bank, Federal, RBL, HSBC, Barclays & more.',
+  title: 'Supported Banks — Chase, BofA, SBI, HDFC, ICICI & 500+ More',
+  description: 'BankXL converts PDF statements from 500+ US and Indian banks: Chase, Bank of America, Wells Fargo, Citibank, Capital One, SBI, HDFC, ICICI, Axis, Kotak, PNB, Canara & more.',
   alternates: { canonical: '/banks' },
   openGraph: {
-    title: 'Every Bank Supported — SBI, HDFC, ICICI, Axis & 500+ Banks',
-    description: 'Convert PDF bank statements from any Indian or international bank to Excel, CSV, or Tally XML in seconds.',
+    title: 'Every Bank Supported — Chase, BofA, SBI, HDFC & 500+ Banks',
+    description: 'Convert PDF bank statements from any US or Indian bank to Excel, CSV, or Tally XML in seconds.',
     url: '/banks',
   },
 }
@@ -29,14 +29,21 @@ const BANK_SLUGS: Record<string, string> = {
   'IndusInd Bank': 'indusind',
   'Yes Bank': 'yes-bank',
   'Federal Bank': 'federal',
+  'Chase Bank': 'chase',
+  'Bank of America': 'bank-of-america',
+  'Wells Fargo': 'wells-fargo',
+  'Citibank (US)': 'citibank-us',
+  'Capital One': 'capital-one',
+  'U.S. Bank': 'us-bank',
 }
 
 const PUBLIC_SECTOR = ['State Bank of India', 'Punjab National Bank', 'Bank of Baroda', 'Canara Bank', 'Union Bank of India', 'Indian Bank', 'Bank of India', 'Central Bank of India', 'Bank of Maharashtra', 'UCO Bank', 'IDBI Bank', 'Indian Overseas Bank', 'Punjab & Sind Bank']
 const PRIVATE_SECTOR = ['HDFC Bank', 'ICICI Bank', 'Axis Bank', 'Kotak Mahindra Bank', 'IndusInd Bank', 'Yes Bank', 'IDFC First Bank', 'Federal Bank', 'RBL Bank', 'South Indian Bank', 'Karnataka Bank', 'City Union Bank', 'Karur Vysya Bank', 'Tamilnad Mercantile Bank', 'DCB Bank', 'CSB Bank']
 const SMALL_FINANCE = ['AU Small Finance Bank', 'Equitas Small Finance Bank', 'Ujjivan Small Finance Bank', 'Jana Small Finance Bank', 'ESAF Small Finance Bank', 'Suryoday Small Finance Bank', 'Capital Small Finance Bank']
 const PAYMENT_BANKS = ['Paytm Payments Bank', 'Airtel Payments Bank', 'India Post Payments Bank', 'Fino Payments Bank', 'Jio Payments Bank']
-const FOREIGN = ['HSBC', 'Citibank', 'Standard Chartered', 'DBS Bank', 'Deutsche Bank', 'Bank of America', 'Barclays', 'JP Morgan Chase']
+const FOREIGN = ['HSBC', 'Citibank', 'Standard Chartered', 'DBS Bank', 'Deutsche Bank', 'Barclays']
 const COOPERATIVE = ['Saraswat Bank', 'Cosmos Bank', 'TJSB Bank', 'Apna Sahakari Bank', 'NKGSB Bank', 'Bharat Co-operative Bank']
+const US_BANKS = ['Chase Bank', 'Bank of America', 'Wells Fargo', 'Citibank (US)', 'Capital One', 'U.S. Bank']
 
 const Section = ({ title, banks }: { title: string; banks: string[] }) => (
   <div style={{ marginBottom: 40 }}>
@@ -78,6 +85,7 @@ export default function BanksPage() {
           BankXL works with 500+ Indian and international banks. Banks marked with a <span style={{ color: 'var(--accent)' }}>guide →</span> have a dedicated conversion guide. If your bank isn't listed, try it anyway — our AI handles most formats automatically.
         </p>
 
+        <Section title="US Banks" banks={US_BANKS} />
         <Section title="Public Sector Banks" banks={PUBLIC_SECTOR} />
         <Section title="Private Sector Banks" banks={PRIVATE_SECTOR} />
         <Section title="Small Finance Banks" banks={SMALL_FINANCE} />
