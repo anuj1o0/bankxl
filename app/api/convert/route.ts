@@ -6,7 +6,7 @@ import { validatePdf, PdfValidationError } from '@/lib/pdf-validation'
 import { bankNameFromFilename } from '@/lib/normalize'
 
 // Hobby plan caps at 60s; Pro plan supports up to 300s. With chunked
-// extraction (10 pages per chunk, parallel), even 50-page PDFs finish
+// extraction (6 pages per chunk, parallel), even 50-page PDFs finish
 // in well under 60s on the Hobby plan.
 export const maxDuration = 60
 export const runtime = 'nodejs'
@@ -305,13 +305,24 @@ export async function POST(req: NextRequest) {
   try {
     // Small PDFs (≤ 6 pages) → single Gemini call, no chunking.
     //   - These already finish in 45-50s as one request, no benefit from splitting.
-    // Larger PDFs (> 6 pages) → split into 2-page chunks, parallel + sequential
+    // Larger PDFs (> 6 pages) → split into 6-page chunks, parallel + sequential
     // retry for any failed chunks. See extractFromPDFChunked() for details.
+    //
+    // PAGES_PER_CHUNK was 2 for a while (very fast per-chunk latency), but
+    // that meant a 178-page statement fired 89 separate Gemini calls — each
+    // repeating the full instruction/schema prompt, and each an independent
+    // shot at cascading into the expensive gemini-2.5-pro model on retry.
+    // 6 pages/chunk cuts call count ~3x for large statements while staying
+    // well inside per-call latency limits.
     const CHUNK_THRESHOLD = 6
-    const PAGES_PER_CHUNK = 2
+    const PAGES_PER_CHUNK = 6
+    // Both paths get the same deadline — previously only the chunked path
+    // had one, so a small PDF whose model cascade ran long was guaranteed
+    // to hit the 55s race and fail, while the abandoned Gemini calls kept
+    // running (and billing) in the background.
     const extractor = pageCount > CHUNK_THRESHOLD
       ? extractFromPDFChunked(fileBuffer, PAGES_PER_CHUNK, extractionDeadline)
-      : extractFromPDF(fileBuffer)
+      : extractFromPDF(fileBuffer, false, true, extractionDeadline)
 
     extracted = await Promise.race([
       extractor,
