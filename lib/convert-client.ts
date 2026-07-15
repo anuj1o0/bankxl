@@ -138,6 +138,35 @@ export async function convertPdf(
   const t0 = Date.now()
   const { onProgress, brandName } = opts
 
+  // ─── Tier 1: the deterministic engine (fast, free, no AI) ────────────────
+  // Every PDF tries /api/convert/local first — any size, one request,
+  // seconds. Only a typed PARSER_UNSUPPORTED decline falls through to the
+  // extended flow; auth, quota, and validation errors are final either way.
+  onProgress?.({ phase: 'uploading' })
+  const localForm = new FormData()
+  localForm.append('pdf', file)
+  localForm.append('format', format)
+  if (brandName) localForm.append('brandName', brandName)
+  let localRes: Response | null = null
+  try {
+    localRes = await fetch('/api/convert/local', { method: 'POST', body: localForm })
+  } catch {
+    localRes = null // network blip — the fallback tiers get their own try
+  }
+  if (localRes) {
+    if (localRes.ok) {
+      onProgress?.({ phase: 'building' })
+      const blob = await localRes.blob()
+      return parseOutputResponse(localRes, blob, file, format, t0)
+    }
+    const data = await localRes.json().catch(() => ({}) as { error?: string; code?: string; canTopup?: boolean })
+    const fallbackEligible = localRes.status === 422 && data?.code === 'PARSER_UNSUPPORTED'
+    if (!fallbackEligible) {
+      throw new ConvertError(data?.error || `Conversion failed (${localRes.status}).`, !!data?.canTopup)
+    }
+  }
+
+  // ─── Tier 2: the extended pipeline ───────────────────────────────────────
   // Count pages locally to pick the path. If pdf-lib can't read it in the
   // browser for any reason, the server-side legacy route is the fallback —
   // it has richer validation and friendlier error messages.
