@@ -1,6 +1,7 @@
 'use client'
 import { createContext, useContext, useState, useCallback, useRef, ReactNode } from 'react'
 import { track } from '@/lib/track'
+import { convertPdf, ConvertError } from '@/lib/convert-client'
 
 export type JobStatus = 'queued' | 'uploading' | 'extracting' | 'building' | 'done' | 'error'
 export interface Job {
@@ -45,6 +46,10 @@ export function ConversionsProvider({ children, onComplete }: { children: ReactN
     setJobs(prev => prev.map(j => j.id === id ? { ...j, ...fields } : j))
   }, [])
 
+  // setInterval, NOT requestAnimationFrame: rAF is paused in hidden tabs, so
+  // with rAF a job's progress bar froze whenever the user switched tabs —
+  // and looked exactly like a hung conversion. Intervals keep firing
+  // (throttled) in background tabs.
   const runProgress = useCallback((id: string, signal: { cancelled: boolean }) => {
     const stages: { status: JobStatus; until: number; duration: number }[] = [
       { status: 'uploading', until: 25, duration: 800 },
@@ -53,10 +58,10 @@ export function ConversionsProvider({ children, onComplete }: { children: ReactN
     let prog = 0
     let stageIdx = 0
     const start = Date.now()
-    const tick = () => {
-      if (signal.cancelled) return
+    const iv = setInterval(() => {
+      if (signal.cancelled) { clearInterval(iv); return }
       const stage = stages[stageIdx]
-      if (!stage) return
+      if (!stage) { clearInterval(iv); return }
       const stageStart = start + stages.slice(0, stageIdx).reduce((s, st) => s + st.duration, 0)
       const t = Math.min((Date.now() - stageStart) / stage.duration, 1)
       const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t
@@ -66,9 +71,8 @@ export function ConversionsProvider({ children, onComplete }: { children: ReactN
       if (t >= 1 && stageIdx < stages.length - 1) {
         stageIdx++
       }
-      if (prog < 88) requestAnimationFrame(tick)
-    }
-    requestAnimationFrame(tick)
+      if (prog >= 88) clearInterval(iv)
+    }, 50)
   }, [updateJob])
 
   const startJob = useCallback((file: File, format: Job['format']) => {
@@ -83,44 +87,42 @@ export function ConversionsProvider({ children, onComplete }: { children: ReactN
     const signal = { cancelled: false }
     setTimeout(() => runProgress(id, signal), 100)
 
-    const formData = new FormData()
-    formData.append('pdf', file)
-    formData.append('format', format)
-
     ;(async () => {
       try {
-        const res = await fetch('/api/convert', { method: 'POST', body: formData })
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}))
-          signal.cancelled = true
-          track('conversion_failed', { format, surface: 'dashboard', reason: data.canTopup ? 'usage_limit' : 'extraction_error' })
-          updateJob(id, {
-            status: 'error',
-            error: data.error || 'Conversion failed',
-            errorCanTopup: !!data.canTopup,
-            progress: 0,
-            completedAt: Date.now(),
-          })
-          return
-        }
-        updateJob(id, { status: 'building', progress: 95 })
-        const blob = await res.blob()
-        const txCount = parseInt(res.headers.get('X-Transactions-Count') || '0')
-        const pages = parseInt(res.headers.get('X-Pages-Count') || '1')
-        const bank = res.headers.get('X-Bank-Name') || ''
-        const conversionId = res.headers.get('X-Conversion-Id') || ''
-        const warningHeader = res.headers.get('X-Extraction-Warning')
-        const warning = warningHeader ? decodeURIComponent(warningHeader) : undefined
-        const ext = format === 'excel' ? 'xlsx' : format === 'csv' ? 'csv' : format === 'json' ? 'json' : 'xml'
-        const filename_out = file.name.replace(/\.pdf$/i, '') + '_bankxl.' + ext
+        const out = await convertPdf(file, format, {
+          onProgress: p => {
+            // Real per-chunk progress from the chunked pipeline replaces the
+            // simulated animation the moment it starts reporting.
+            if (p.phase === 'extracting' && p.chunksTotal) {
+              signal.cancelled = true
+              updateJob(id, { status: 'extracting', progress: 15 + 75 * ((p.chunksDone ?? 0) / p.chunksTotal) })
+            } else if (p.phase === 'building') {
+              signal.cancelled = true
+              updateJob(id, { status: 'building', progress: 95 })
+            }
+          },
+        })
         signal.cancelled = true
-        updateJob(id, { status: 'done', progress: 100, blob, filename_out, txCount, pages, bank, warning, conversionId, completedAt: Date.now() })
-        track('conversion_complete', { format, surface: 'dashboard', pages, txCount, bank })
+        updateJob(id, {
+          status: 'done', progress: 100,
+          blob: out.blob, filename_out: out.filenameOut,
+          txCount: out.txCount, pages: out.pages, bank: out.bank,
+          warning: out.warning, conversionId: out.conversionId,
+          completedAt: Date.now(),
+        })
+        track('conversion_complete', { format, surface: 'dashboard', pages: out.pages, txCount: out.txCount, bank: out.bank })
         onCompleteRef.current?.()
       } catch (e: any) {
         signal.cancelled = true
-        track('conversion_failed', { format, surface: 'dashboard', reason: 'network_error' })
-        updateJob(id, { status: 'error', error: e.message || 'Network error', progress: 0, completedAt: Date.now() })
+        const isNetwork = !(e instanceof ConvertError)
+        track('conversion_failed', { format, surface: 'dashboard', reason: isNetwork ? 'network_error' : (e.canTopup ? 'usage_limit' : 'extraction_error') })
+        updateJob(id, {
+          status: 'error',
+          error: isNetwork ? (e?.message || 'Network error') : e.message,
+          errorCanTopup: e instanceof ConvertError && e.canTopup,
+          progress: 0,
+          completedAt: Date.now(),
+        })
       }
     })()
 

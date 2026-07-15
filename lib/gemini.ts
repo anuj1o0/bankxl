@@ -26,8 +26,10 @@
  *      models and minimized (128) on Pro — see thinkingConfigFor().
  *   2. gemini-2.5-pro is retry-pass-only AND capped per document
  *      (MAX_EXPENSIVE_RETRIES).
- *   3. Chunks are 6 pages (route.ts PAGES_PER_CHUNK) — 2-page chunks meant
- *      a 178-page statement fired 89 separate calls.
+ *   3. Compact positional-array output (see PROMPT) — keyed-object rows
+ *      were ~45% more output tokens for identical data.
+ *   4. Chunk size is 3 pages (pipeline.ts PAGES_PER_CHUNK) — sized so a
+ *      worst-case-density chunk's output generates within one call window.
  */
 
 export interface Transaction {
@@ -89,7 +91,7 @@ function thinkingConfigFor(model: string): { thinkingBudget: number } {
 // flat 50s timeout against a 42s total budget, so one slow call could
 // swallow the whole conversion).
 const SINGLE_CALL_TIMEOUT_MS = 45000  // whole-PDF calls (small statements)
-const CHUNK_CALL_TIMEOUT_MS  = 30000  // per-chunk calls (6 pages each)
+const CHUNK_CALL_TIMEOUT_MS  = 30000  // per-chunk calls (4 pages each)
 // Portion of the budget the parallel pass must leave for sequential retries.
 // Without this the parallel pass could run to the full deadline, and any
 // chunk that failed had zero time left to be retried — a partial result that
@@ -111,6 +113,12 @@ IDBI Bank (IBKL), Bank of Maharashtra (MAHB), UCO Bank (UCBA),
 Punjab & Sind Bank (PSIB), Indian Overseas Bank (IOBA).
 Also detect: credit card statements (Amex, SBI Card, HDFC Credit Card, etc.)`.trim()
 
+// Transactions are emitted as POSITIONAL ARRAYS, not keyed objects. Keyed
+// rows repeat ~40 tokens of key names per transaction; on a dense statement
+// (measured: 195 tx across 4 pages) that was 20K output tokens per chunk —
+// more than the model can generate inside a serverless window, and billed
+// at output rates. Arrays cut output ~45%, which is simultaneously the
+// speed fix and a cost cut. parseResponse() maps them back to objects.
 const PROMPT = `Extract all data from this bank statement PDF.
 Return ONLY a single valid JSON object — no markdown, no code fences, no explanation.
 
@@ -131,15 +139,19 @@ Schema (every key required, use null if unknown):
     "total_pages": number|null
   },
   "transactions": [
-    {"date":"YYYY-MM-DD","description":"string","debit":number|null,"credit":number|null,"balance":number|null,"ref_no":"string|null"}
+    ["YYYY-MM-DD", "description", debit, credit, balance, "ref_no"]
   ]
 }
+
+Each transaction is a 6-element array, positions fixed:
+  [0] date "YYYY-MM-DD"  [1] description string  [2] debit number|null
+  [3] credit number|null  [4] balance number|null  [5] ref_no string|null
 
 Rules:
 - Amounts: plain numbers only, no commas, no currency symbols. E.g. 12400.50 not "12,400.50".
 - Dates: YYYY-MM-DD always. If year is missing, infer from statement period.
-- Debit (Dr/Withdrawal/Debit): debit=amount, credit=null.
-- Credit (Cr/Deposit/Credit): credit=amount, debit=null.
+- Debit (Dr/Withdrawal/Debit): position 2 = amount, position 3 = null.
+- Credit (Cr/Deposit/Credit): position 3 = amount, position 2 = null.
 - ref_no: UPI ref / UTR / cheque number / IMPS ref.
 - SKIP: header rows, page totals, "Brought Forward", "Carried Forward", opening/closing balance rows.
 - bank_name: NEVER return null or "Unknown". If you cannot determine the bank, return your best guess based on IFSC, logo, or format.
@@ -687,16 +699,36 @@ function parseResponse(data: any, model: string): ExtractionResult {
   const text  = candidate?.content?.parts?.[0]?.text?.trim() ?? ''
   const clean = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
 
+  // Rows arrive as positional arrays (see PROMPT) but the model occasionally
+  // falls back to keyed objects — accept both.
+  const toTx = (row: any): Transaction | null => {
+    if (Array.isArray(row)) {
+      if (!row[0]) return null
+      return {
+        date: String(row[0]),
+        description: String(row[1] ?? ''),
+        debit: typeof row[2] === 'number' ? row[2] : null,
+        credit: typeof row[3] === 'number' ? row[3] : null,
+        balance: typeof row[4] === 'number' ? row[4] : null,
+        ref_no: row[5] != null ? String(row[5]) : null,
+      }
+    }
+    if (row && typeof row === 'object' && row.date) return row as Transaction
+    return null
+  }
+  const toTxList = (rows: any): Transaction[] =>
+    Array.isArray(rows) ? rows.map(toTx).filter((t): t is Transaction => t !== null) : []
+
   const tryParse = (s: string): ExtractionResult | null => {
     try {
       const parsed = JSON.parse(s)
       if (Array.isArray(parsed)) {
-        return { meta: { ...EMPTY_META }, transactions: parsed }
+        return { meta: { ...EMPTY_META }, transactions: toTxList(parsed) }
       }
       if (parsed && typeof parsed === 'object') {
         return {
           meta: { ...EMPTY_META, ...(parsed.meta ?? {}) },
-          transactions: Array.isArray(parsed.transactions) ? parsed.transactions : [],
+          transactions: toTxList(parsed.transactions),
         }
       }
     } catch {}
@@ -719,8 +751,10 @@ function parseResponse(data: any, model: string): ExtractionResult {
     try {
       // Close any incomplete JSON array
       const partial = partialMatch[1]
-        .replace(/,\s*$/, '')   // remove trailing comma
-        .replace(/\{[^}]*$/, '') // remove incomplete last object
+        .replace(/,\s*$/, '')     // remove trailing comma
+        .replace(/\{[^}]*$/, '')  // remove incomplete last object row
+        .replace(/\[[^\][]*$/, '') // remove incomplete last array row
+        .replace(/,\s*$/, '')     // trailing comma left by the row removal
         + ']'
       const r = tryParse(`{"meta":{},"transactions":${partial}}`)
       if (r && r.transactions.length > 0) {
