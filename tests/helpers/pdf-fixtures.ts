@@ -70,6 +70,8 @@ export interface FixtureRow {
 }
 
 export interface FixturePage {
+  /** Letterhead lines printed above the table (bank name, account details). */
+  titleLines?: string[]
   /** Print the header row on this page (continuation pages often omit it). */
   withHeader: boolean
   rows: FixtureRow[]
@@ -90,6 +92,12 @@ export async function makeStatementPdf(pages: FixturePage[]): Promise<Buffer> {
   for (const spec of pages) {
     const page = doc.addPage([FIXTURE_PAGE_WIDTH, FIXTURE_PAGE_HEIGHT])
     let y = FIXTURE_PAGE_HEIGHT - 60
+
+    for (const title of spec.titleLines ?? []) {
+      page.drawText(title, { x: STMT_COLS.date, y, size: 10, font })
+      y -= 16
+    }
+    if (spec.titleLines?.length) y -= 8
 
     if (spec.withHeader) {
       page.drawText('Date', { x: STMT_COLS.date, y, size, font })

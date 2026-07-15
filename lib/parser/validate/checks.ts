@@ -5,22 +5,19 @@
  * throws, and knows nothing about verdicts (validate.ts owns policy).
  */
 import { isUsableAmount } from '../core/money'
+import { isValidIsoDate } from '../core/dates'
 import type { ParsedTransaction, StatementMetadata } from '../core/types'
 import type { ValidationIssue } from './types'
+
+// Re-exported for existing consumers; the implementation lives in core/dates
+// because row parsing needs it too.
+export { isValidIsoDate }
 
 /** Days a transaction may fall outside the statement period before warning. */
 const PERIOD_GRACE_DAYS = 5
 
 /** Amounts above this (rupees) are suspicious in retail statements. */
 const IMPLAUSIBLE_AMOUNT = 1_000_000_000 // 100 crore
-
-/** Strict ISO calendar-date check (YYYY-MM-DD and actually a real date). */
-export function isValidIsoDate(value: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
-  const [y, m, d] = value.split('-').map(Number)
-  const date = new Date(Date.UTC(y, m - 1, d))
-  return date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d
-}
 
 /** Exactly one of debit/credit must be set, and set amounts must be sane. */
 export function checkAmounts(transactions: ReadonlyArray<ParsedTransaction>): ValidationIssue[] {

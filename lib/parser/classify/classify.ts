@@ -5,18 +5,21 @@
  * layer (digital e-statement) or is image-only (scan/photo) and must go to
  * the OCR path. Purely a function of the extraction stage's output — no I/O.
  *
- * Heuristic: a real statement page carries thousands of extractable
- * characters; a scanned page carries none (or a handful from a watermark or
- * footer stamp). Pages at or above DIGITAL_CHAR_THRESHOLD characters are
- * digital, below it scanned. Document kind is the aggregate: all digital →
- * 'digital', all scanned → 'scanned', otherwise 'mixed' (e.g. a digital
- * statement with a scanned cheque-image appendix page).
+ * Heuristic: "scanned" means the page has essentially NO text layer — a
+ * scan or photo yields zero extractable characters, plus at most a scanner
+ * stamp or page number (~10-30 chars). Any real statement content clears
+ * that easily: a single transaction row alone is ~50+ characters. So the
+ * threshold sits above stamp noise and below one row of content — NOT at
+ * "typical page volume", which misclassified sparse-but-genuine trailing
+ * pages (one transaction + footer) as scans. Document kind is the
+ * aggregate: all digital → 'digital', all scanned → 'scanned', otherwise
+ * 'mixed' (e.g. a digital statement with a scanned cheque-image appendix).
  */
 import type { ParseContext, PipelineStage, StageResult, StageWarning } from '../core/types'
 import type { PdfTextContent } from '../pdf/types'
 
 /** Per-page character count at/above which a page counts as digital. */
-export const DIGITAL_CHAR_THRESHOLD = 150
+export const DIGITAL_CHAR_THRESHOLD = 40
 
 export type DocumentKind = 'digital' | 'scanned' | 'mixed'
 export type PageKind = 'digital' | 'scanned'
