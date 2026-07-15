@@ -52,3 +52,76 @@ export function richTextLines(lineCount = 12): string[] {
     (_, i) => `01/04/2026 UPI-REF00${i} GROCERY STORE PVT LTD 1,234.5${i}`
   )
 }
+
+// ─── Statement-table fixtures ────────────────────────────────────────────────
+
+/** Column x-positions used by the synthetic statement fixture. */
+export const STMT_COLS = { date: 40, desc: 115, ref: 300, debit: 380, credit: 455, balance: 525 } as const
+
+export interface FixtureRow {
+  date: string
+  desc: string
+  /** Optional extra narration lines printed under the description cell. */
+  descContinuations?: string[]
+  ref?: string
+  debit?: string
+  credit?: string
+  balance: string
+}
+
+export interface FixturePage {
+  /** Print the header row on this page (continuation pages often omit it). */
+  withHeader: boolean
+  rows: FixtureRow[]
+  /** Print a "Statement Summary" footer block after the rows. */
+  withFooter?: boolean
+}
+
+/**
+ * Builds a synthetic bank-statement PDF with a real transaction table:
+ * fixed column x-positions, optional per-page header, wrapped descriptions,
+ * and an optional summary footer — the shapes table detection must handle.
+ */
+export async function makeStatementPdf(pages: FixturePage[]): Promise<Buffer> {
+  const doc = await PDFDocument.create()
+  const font = await doc.embedFont(StandardFonts.Helvetica)
+  const size = 9
+
+  for (const spec of pages) {
+    const page = doc.addPage([FIXTURE_PAGE_WIDTH, FIXTURE_PAGE_HEIGHT])
+    let y = FIXTURE_PAGE_HEIGHT - 60
+
+    if (spec.withHeader) {
+      page.drawText('Date', { x: STMT_COLS.date, y, size, font })
+      page.drawText('Particulars', { x: STMT_COLS.desc, y, size, font })
+      page.drawText('Chq./Ref.No.', { x: STMT_COLS.ref, y, size, font })
+      page.drawText('Withdrawal Amt.', { x: STMT_COLS.debit, y, size, font })
+      page.drawText('Deposit Amt.', { x: STMT_COLS.credit, y, size, font })
+      page.drawText('Closing Balance', { x: STMT_COLS.balance, y, size, font })
+      y -= 20
+    }
+
+    for (const row of spec.rows) {
+      page.drawText(row.date, { x: STMT_COLS.date, y, size, font })
+      page.drawText(row.desc, { x: STMT_COLS.desc, y, size, font })
+      if (row.ref) page.drawText(row.ref, { x: STMT_COLS.ref, y, size, font })
+      if (row.debit) page.drawText(row.debit, { x: STMT_COLS.debit, y, size, font })
+      if (row.credit) page.drawText(row.credit, { x: STMT_COLS.credit, y, size, font })
+      page.drawText(row.balance, { x: STMT_COLS.balance, y, size, font })
+      y -= 14
+      for (const cont of row.descContinuations ?? []) {
+        page.drawText(cont, { x: STMT_COLS.desc, y, size, font })
+        y -= 14
+      }
+    }
+
+    if (spec.withFooter) {
+      y -= 30
+      page.drawText('Statement Summary', { x: STMT_COLS.date, y, size: 10, font })
+      y -= 16
+      page.drawText('Total Debits: 4 Total Credits: 2', { x: STMT_COLS.date, y, size, font })
+    }
+  }
+
+  return Buffer.from(await doc.save())
+}
