@@ -4,7 +4,12 @@ const nextConfig = {
   reactStrictMode: true,
   compress: true,
   experimental: {
-    serverComponentsExternalPackages: ['sharp', 'pdf-parse', 'exceljs'],
+    // pdfjs-dist must stay UNBUNDLED: Next's server bundler copies the
+    // library into .next/server/vendor-chunks but not its pdf.worker.mjs
+    // companion, and pdfjs's worker setup then fails at runtime ("Cannot
+    // find module '...vendor-chunks/pdf.worker.mjs'"). Loading it from
+    // node_modules keeps the worker file next to the library.
+    serverComponentsExternalPackages: ['sharp', 'pdf-parse', 'exceljs', 'pdfjs-dist'],
   },
   // NOTE: do NOT add a www<->apex redirect here without first checking
   // Vercel's dashboard (Project → Settings → Domains). An app-level redirect

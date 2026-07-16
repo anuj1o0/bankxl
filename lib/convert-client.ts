@@ -207,6 +207,7 @@ export async function convertPdf(
   const results: (ChunkResult | null)[] = new Array(total).fill(null)
   let expensiveUsed = 0
   let nextIndex = 0
+  let lastChunkError: ConvertError | null = null
 
   async function worker() {
     while (true) {
@@ -226,6 +227,7 @@ export async function convertPdf(
           results[i] = await postChunk(chunks[i], conversionId, i, sendAttempt)
           break
         } catch (e: any) {
+          if (e instanceof ConvertError) lastChunkError = e
           // 4xx server verdicts (bad chunk, expired conversion) are final;
           // 502 extraction hiccups and network errors are worth retrying
           // after a short pause.
@@ -246,13 +248,16 @@ export async function convertPdf(
   const successes = results.filter((r): r is ChunkResult => !!r)
   const failedChunks = total - successes.length
   if (successes.length === 0) {
-    // Let the server mark the conversion failed, then surface its message.
-    const res = await fetch('/api/convert/finalize', {
+    // Mark the conversion failed server-side, but surface the CHUNK failure
+    // to the user: finalize's "no transactions found" message accuses the
+    // document, when the real cause (e.g. AI quota exhausted) came from the
+    // chunk calls.
+    await fetch('/api/convert/finalize', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ conversionId, format, filename: file.name, results: [], totalPages: plan.pageCount }),
-    })
-    throw await readError(res)
+    }).catch(() => undefined)
+    throw lastChunkError ?? new ConvertError('Conversion failed — the extraction service did not return any data.')
   }
 
   // 4. Finalize — merge + build the output file.
