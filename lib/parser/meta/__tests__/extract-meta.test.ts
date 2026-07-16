@@ -76,4 +76,21 @@ describe('MetadataExtractionStage', () => {
     const result = await runStage(stage, doc('Account No: 5010XXXXXX6789'), ctx())
     expect(result.data.accountNumber).toBe('5010XXXXXX6789')
   })
+
+  it('ignores counterparty IFSC codes in transaction narrations', async () => {
+    // Real bug: a NEFT narration's Axis IFSC (UTIB...) was reported as the
+    // account IFSC on an HDFC statement. Identity fields only scan the
+    // letterhead region (first 30 lines).
+    const letterhead = ['HDFC BANK Statement', 'IFSC : HDFC0001234']
+    const filler = Array.from({ length: 40 }, (_, i) => `01/04/2026 UPI PAYMENT ROW ${i} 100.00`)
+    const narration = ['NEFT/UTIB0000509/SOME COUNTERPARTY/AXIS BANK TRANSFER']
+    const result = await runStage(stage, doc(...letterhead, ...filler, ...narration), ctx())
+    expect(result.data.ifsc).toBe('HDFC0001234')
+  })
+
+  it('does not take an IFSC from narrations when the letterhead has none', async () => {
+    const filler = Array.from({ length: 40 }, (_, i) => `filler line ${i}`)
+    const result = await runStage(stage, doc(...filler, 'NEFT/UTIB0000509/COUNTERPARTY'), ctx())
+    expect(result.data.ifsc).toBeNull()
+  })
 })

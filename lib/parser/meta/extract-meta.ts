@@ -54,14 +54,25 @@ export class MetadataExtractionStage implements PipelineStage<PdfTextContent, St
       }
     }
 
-    for (const text of lineTexts) {
-      if (meta.ifsc === null) {
-        const m = IFSC_RE.exec(text.toUpperCase())
-        if (m) meta.ifsc = m[1]
-      }
-      if (meta.accountNumber === null) {
-        const m = ACCOUNT_RE.exec(text)
-        if (m) meta.accountNumber = m[1]
+    // The account's own IFSC/number live in the LETTERHEAD, but transaction
+    // narrations are full of counterparty codes (observed: an Axis IFSC
+    // from a NEFT narration reported as the account IFSC on an HDFC
+    // statement). Identity fields therefore only scan the top of the
+    // document; balances/period keep the full scan (summaries sit at the
+    // end).
+    const letterheadLimit = Math.min(lineTexts.length, 30)
+
+    for (let li = 0; li < lineTexts.length; li++) {
+      const text = lineTexts[li]
+      if (li < letterheadLimit) {
+        if (meta.ifsc === null) {
+          const m = IFSC_RE.exec(text.toUpperCase())
+          if (m) meta.ifsc = m[1]
+        }
+        if (meta.accountNumber === null) {
+          const m = ACCOUNT_RE.exec(text)
+          if (m) meta.accountNumber = m[1]
+        }
       }
       if (meta.openingBalance === null) {
         const m = OPENING_RE.exec(text)

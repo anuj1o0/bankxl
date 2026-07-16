@@ -45,3 +45,6 @@ next-env.d.ts
 # OS
 Thumbs.db
 desktop.ini
+
+# Real/local statement fixtures — never committed (may contain personal data)
+tests/fixtures/local/

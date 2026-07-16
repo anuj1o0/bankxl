@@ -39,10 +39,27 @@ const GENERIC_JUNK_PATTERNS: ReadonlyArray<RegExp> = [
   /^closing\s+balance\b/i,
   /^total\b/i,
   /^grand\s+total\b/i,
+  // Statement-body totals rows, as printed by real banks (observed:
+  // "TRANSACTION TOTAL" extracted as a transaction, doubling the export's
+  // own totals). Structure guard still protects merchants like
+  // "TOTAL FUEL STATION" — those rows carry a date.
+  /\btransactions?\s+totals?\b/i,
+  /^totals?\s+(?:transactions?|debits?|credits?|amount)\b/i,
 ]
 
-const DR_SUFFIX_RE = /\bdr\.?\s*$/i
+/**
+ * Negative-balance notations banks actually print: trailing "Dr"
+ * (debit balance), trailing "OD" (overdrawn), or accounting parentheses —
+ * "(22,736.59) OD" was observed in the wild combining both.
+ */
+const NEG_SUFFIX_RE = /\b(?:dr|od)\b\.?\s*$/i
 const CR_MARKER_RE = /^cr/i
+
+function hasNegativeMarker(raw: string): boolean {
+  const t = raw.trim()
+  if (NEG_SUFFIX_RE.test(t)) return true
+  return /^\(.*\)$/.test(t.replace(NEG_SUFFIX_RE, '').trim())
+}
 
 /**
  * Whether the row's text matches a junk pattern. Patterns run against each
@@ -62,11 +79,11 @@ function cellAt(cells: ReadonlyArray<string>, index: number | undefined): string
   return index === undefined ? '' : (cells[index] ?? '')
 }
 
-/** Balance parse honoring the overdraft convention: "1,234.56 Dr" < 0. */
+/** Balance parse honoring overdraft notation: "1,234.56 Dr", "(1,234.56) OD". */
 function parseBalance(raw: string): number | null {
   const value = parseAmount(raw)
   if (value === null) return null
-  return DR_SUFFIX_RE.test(raw.trim()) ? -Math.abs(value) : value
+  return hasNegativeMarker(raw) ? -Math.abs(value) : value
 }
 
 /** Splits debit/credit from either two-column or Amount+Dr/Cr layouts. */

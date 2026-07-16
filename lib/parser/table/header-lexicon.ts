@@ -78,6 +78,83 @@ function normalize(text: string): string {
 }
 
 /**
+ * Splits header cells that contain MORE THAN ONE lexicon field into
+ * per-field cells, x-ranges estimated by character position.
+ *
+ * Real statements produce these when two column headers sit closer than the
+ * cell-coalescing gap (or are emitted as one text run by browser-print
+ * PDFs): "Debit (Rs) Credit (Rs)" and "Chq/Ref No Withdrawal" were both
+ * observed as single cells — each swallowing a money column, which loses
+ * every amount downstream. Cells with 0 or 1 field matches pass through
+ * untouched.
+ */
+export function expandCompoundHeaderCells(cells: ReadonlyArray<Cell>): Cell[] {
+  const out: Cell[] = []
+  for (const cell of cells) {
+    const matches = findFieldMatches(cell.text)
+    if (matches.length < 2) {
+      out.push(cell)
+      continue
+    }
+    const width = cell.xEnd - cell.x
+    const len = cell.text.length
+    for (let i = 0; i < matches.length; i++) {
+      // Each sub-cell runs from its match's start to just before the next
+      // match's start (the last one takes the remainder).
+      const startChar = i === 0 ? 0 : matches[i].start
+      const endChar = i === matches.length - 1 ? len : matches[i + 1].start
+      out.push({
+        text: cell.text.slice(startChar, endChar).trim(),
+        x: cell.x + (startChar / len) * width,
+        xEnd: cell.x + (endChar / len) * width,
+      })
+    }
+  }
+  return out
+}
+
+/** A lexicon field found inside a text, with character offsets. */
+interface FieldMatch {
+  field: CanonicalField
+  start: number
+  end: number
+}
+
+/**
+ * Finds ALL distinct lexicon fields inside one text, with char offsets, by
+ * sliding a word-window over the tokenized text (longest phrases first so
+ * "value date" isn't consumed as "date").
+ */
+function findFieldMatches(text: string): FieldMatch[] {
+  const tokens: { norm: string; start: number; end: number }[] = []
+  const re = /[a-zA-Z0-9]+/g
+  for (let m = re.exec(text); m !== null; m = re.exec(text)) {
+    tokens.push({ norm: m[0].toLowerCase(), start: m.index, end: m.index + m[0].length })
+  }
+  const consumed = new Array(tokens.length).fill(false)
+  const matches: FieldMatch[] = []
+  const entries = [...LEXICON].sort((a, b) => b.phrase.length - a.phrase.length)
+  for (const entry of entries) {
+    const words = entry.phrase.split(' ')
+    for (let i = 0; i + words.length <= tokens.length; i++) {
+      if (consumed[i]) continue
+      let ok = true
+      for (let j = 0; j < words.length; j++) {
+        if (consumed[i + j] || tokens[i + j].norm !== words[j]) {
+          ok = false
+          break
+        }
+      }
+      if (!ok) continue
+      if (matches.some(x => x.field === entry.field)) continue // one per field
+      for (let j = 0; j < words.length; j++) consumed[i + j] = true
+      matches.push({ field: entry.field, start: tokens[i].start, end: tokens[i + words.length - 1].end })
+    }
+  }
+  return matches.sort((a, b) => a.start - b.start)
+}
+
+/**
  * Maps one header cell's text to its most likely canonical field.
  *
  * @param text - Header cell text as printed (e.g. "Chq./Ref.No.").

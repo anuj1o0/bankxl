@@ -12,7 +12,7 @@ import { ParserError } from '../core/errors'
 import type { ParseContext, PipelineStage, StageResult, StageWarning } from '../core/types'
 import type { PdfTextContent } from '../pdf/types'
 import { buildLines, coalesceCells } from './lines'
-import { scoreHeaderLine } from './header-lexicon'
+import { expandCompoundHeaderCells, matchHeaderCell, scoreHeaderLine } from './header-lexicon'
 import { looksLikeAmount, looksLikeDate } from './patterns'
 import { mergeContinuationRows, type CandidateRow, type UnmergedTable } from './merge'
 import type { Cell, ColumnAnchor, Line, TableDetectionOutput } from './types'
@@ -50,26 +50,50 @@ function isFooterLine(cells: ReadonlyArray<Cell>): boolean {
   return FOOTER_PHRASES.some(p => text.startsWith(p))
 }
 
-/** Distance between a cell and a column anchor (0 when they overlap). */
-function intervalDistance(cell: Cell, col: ColumnAnchor): number {
-  if (cell.xEnd >= col.xStart && cell.x <= col.xEnd) return 0
-  return cell.x > col.xEnd ? cell.x - col.xEnd : col.xStart - cell.xEnd
+function nearestColumn(x: number, xEnd: number, columns: ReadonlyArray<ColumnAnchor>): number {
+  let best = 0
+  let bestDist = Number.POSITIVE_INFINITY
+  for (const col of columns) {
+    const d = xEnd >= col.xStart && x <= col.xEnd ? 0 : x > col.xEnd ? x - col.xEnd : col.xStart - xEnd
+    if (d < bestDist) {
+      bestDist = d
+      best = col.index
+    }
+  }
+  return best
 }
 
-/** Slots a line's cells into column positions; cell texts joined on collision. */
+/**
+ * Slots a line's cells into column positions; cell texts joined on collision.
+ *
+ * A cell whose x-range spans SEVERAL column anchors gets token-level
+ * treatment: browser-print PDFs emit whole segments as one text run
+ * ("02/04/2026 02/04/2026 UPI/CR/..." or "82,500.00 1,27,882.50"), so each
+ * token's x-position is estimated by its character fraction of the run and
+ * slotted individually. Single-column cells keep the plain path.
+ */
 function slotCells(cells: ReadonlyArray<Cell>, columns: ReadonlyArray<ColumnAnchor>): string[] {
   const slots: string[] = columns.map(() => '')
+  const put = (index: number, text: string) => {
+    slots[index] = slots[index] ? `${slots[index]} ${text}` : text
+  }
   for (const cell of cells) {
-    let best = 0
-    let bestDist = Number.POSITIVE_INFINITY
-    for (const col of columns) {
-      const d = intervalDistance(cell, col)
-      if (d < bestDist) {
-        bestDist = d
-        best = col.index
+    const spanned = columns.filter(c => cell.xEnd >= c.xStart && cell.x <= c.xEnd)
+    const tokens = cell.text.split(/\s+/).filter(t => t.length > 0)
+    if (spanned.length >= 2 && tokens.length >= 2) {
+      const width = cell.xEnd - cell.x
+      const len = cell.text.length
+      let offset = 0
+      for (const token of tokens) {
+        const start = cell.text.indexOf(token, offset)
+        offset = start + token.length
+        const tokenX = cell.x + (start / len) * width
+        const tokenXEnd = cell.x + (offset / len) * width
+        put(nearestColumn(tokenX, tokenXEnd, columns), token)
       }
+    } else {
+      put(nearestColumn(cell.x, cell.xEnd, columns), cell.text)
     }
-    slots[best] = slots[best] ? `${slots[best]} ${cell.text}` : cell.text
   }
   return slots
 }
@@ -79,27 +103,66 @@ interface HeaderDetection {
   columns: ColumnAnchor[]
 }
 
-/** Finds the best-scoring header line on a page, if any qualifies. */
+interface HeaderCandidate {
+  index: number
+  line: Line
+  cells: Cell[]
+  fields: (ColumnAnchor['suggestedField'])[]
+  score: number
+}
+
+/**
+ * Finds the best-scoring header line on a page, if any qualifies.
+ *
+ * Compound cells are expanded first ("Debit (Rs) Credit (Rs)" → two
+ * anchors — observed on a real SBI statement where that single cell
+ * swallowed the credit column). After the winning line is chosen,
+ * lexicon-matching cells from IMMEDIATELY adjacent lines are absorbed as
+ * additional anchors: multi-line headers ("Value" / "Date" stacked,
+ * "Balance" with "(Rs)" beneath) otherwise lose whole columns.
+ */
 function detectHeader(lines: ReadonlyArray<Line>): HeaderDetection | null {
-  let best: { line: Line; cells: Cell[]; fields: (ColumnAnchor['suggestedField'])[]; score: number } | null = null
-  for (const line of lines) {
-    const cells = coalesceCells(line)
-    if (cells.length < 3) continue
+  let best: HeaderCandidate | null = null
+  lines.forEach((line, index) => {
+    const cells = expandCompoundHeaderCells(coalesceCells(line))
+    if (cells.length < 3) return
     const score = scoreHeaderLine(cells)
-    if (!score.isHeader) continue
+    if (!score.isHeader) return
     if (!best || score.matchedFields.length > best.score) {
-      best = { line, cells, fields: score.cellFields, score: score.matchedFields.length }
+      best = { index, line, cells, fields: score.cellFields, score: score.matchedFields.length }
+    }
+  })
+  if (!best) return null
+  const chosen: HeaderCandidate = best
+
+  const anchors = chosen.cells.map((c, i) => ({ x: c.x, xEnd: c.xEnd, text: c.text, field: chosen.fields[i] }))
+
+  // Absorb header fragments from the lines directly above/below the header.
+  const maxGap = Math.max(chosen.line.height, 10) * 2.5
+  for (const neighborIdx of [chosen.index - 1, chosen.index + 1]) {
+    const neighbor = lines[neighborIdx]
+    if (!neighbor) continue
+    if (Math.abs(neighbor.y - chosen.line.y) > maxGap) continue
+    for (const cell of coalesceCells(neighbor)) {
+      const field = matchHeaderCell(cell.text)
+      if (!field) continue
+      // Only absorb into x-space no existing anchor covers — a fragment
+      // over an existing column is a stacked label, not a new column.
+      const overlaps = anchors.some(a => cell.xEnd >= a.x && cell.x <= a.xEnd)
+      if (overlaps) continue
+      anchors.push({ x: cell.x, xEnd: cell.xEnd, text: cell.text, field })
     }
   }
-  if (!best) return null
+
+  anchors.sort((a, b) => a.x - b.x)
   return {
-    line: best.line,
-    columns: best.cells.map((c, i) => ({
+    line: chosen.line,
+    columns: anchors.map((a, i) => ({
       index: i,
-      xStart: c.x,
-      xEnd: c.xEnd,
-      headerText: c.text,
-      suggestedField: best.fields[i],
+      xStart: a.x,
+      xEnd: a.xEnd,
+      headerText: a.text,
+      suggestedField: a.field,
     })),
   }
 }

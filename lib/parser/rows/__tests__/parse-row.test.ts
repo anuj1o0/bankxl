@@ -94,6 +94,31 @@ describe('RowParsingStage', () => {
     expect(result.data.transactions[0].balance).toBe(-3653.02)
   })
 
+  it('treats "(x) OD" parenthesized overdraft balances as negatives', async () => {
+    // Real notation from the stress fixture: accounting parens + OD suffix.
+    const result = await parse([
+      mapped(SIX_COL, [
+        row(['01/04/2026', 'CHQ PAID', '', '17,714.22', '', '(42,717.34) OD']),
+        row(['02/04/2026', 'INTEREST', '', '', '0.54', '(42,716.80) OD']),
+      ]),
+    ])
+    expect(result.data.transactions[0].balance).toBe(-42717.34)
+    expect(result.data.transactions[1].balance).toBe(-42716.8)
+  })
+
+  it('drops statement-body totals rows like "TRANSACTION TOTAL"', async () => {
+    // Real shape: a dateless row carrying BOTH total debit and total credit,
+    // previously exported as a fake transaction that doubled the totals.
+    const result = await parse([
+      mapped(SIX_COL, [
+        row(['01/04/2026', 'REAL ROW', '', '100.00', '', '900.00']),
+        row(['', 'TRANSACTION TOTAL', '', '1,88,216.29', '1,85,281.00', '']),
+      ]),
+    ])
+    expect(result.data.transactions).toHaveLength(1)
+    expect(result.data.junkRowsDropped).toBe(1)
+  })
+
   it('inherits the previous date for dateless amount rows, with penalty', async () => {
     const result = await parse([
       mapped(SIX_COL, [

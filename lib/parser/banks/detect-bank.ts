@@ -7,16 +7,21 @@
  * the generic pipeline parses conventional layouts without bank rules, and
  * the validator decides whether the result is trustworthy.
  *
- * Scans only the first pages (SCAN_PAGE_LIMIT): letterhead and account
- * details always sit up front, and description text further in can contain
- * OTHER banks' names (NEFT counterparties), which must not win detection.
+ * Scans only the LETTERHEAD REGION (top lines of the first pages): account
+ * details always sit up front, and transaction narrations are saturated
+ * with OTHER banks' names and codes — observed live: "HDFC BANK" matched
+ * from a page-1 UPI narration on an Axis statement whose letterhead IFSC
+ * said UTIB. Narrations must never win detection.
  */
 import type { ParseContext, PipelineStage, StageResult, StageWarning } from '../core/types'
 import type { PdfTextContent } from '../pdf/types'
+import { buildLines, coalesceCells } from '../table/lines'
 import { getRegisteredBanks, findByIfscPrefix } from './registry'
 import type { BankDetectionResult, BankRules } from './types'
 
 const SCAN_PAGE_LIMIT = 2
+/** Lines from the top of each scanned page considered letterhead. */
+const SCAN_LINE_LIMIT = 20
 
 /** IFSC shape: 4 letters, a zero, 6 alphanumerics — e.g. HDFC0001234. */
 const IFSC_RE = /\b([A-Z]{4})0[A-Z0-9]{6}\b/g
@@ -39,7 +44,11 @@ export class BankDetectionStage implements PipelineStage<PdfTextContent, BankDet
     const warnings: StageWarning[] = []
     const text = input.pages
       .slice(0, SCAN_PAGE_LIMIT)
-      .flatMap(p => p.items.map(i => i.text))
+      .flatMap(p =>
+        buildLines(p.items)
+          .slice(0, SCAN_LINE_LIMIT)
+          .map(line => coalesceCells(line).map(c => c.text).join(' '))
+      )
       .join(' ')
 
     let nameMatch: BankRules | null = null
