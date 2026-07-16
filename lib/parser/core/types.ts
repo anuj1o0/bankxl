@@ -99,6 +99,8 @@ export interface StageLogger {
  * Per-document context threaded through every stage: correlation id for
  * logs/audit, the engine version that produced the result, and the logger.
  */
+export type DateFieldOrder = 'dmy' | 'mdy'
+
 export interface ParseContext {
   /** Correlation id — the conversions-table row id, or a synthetic id in tests. */
   docId: string
@@ -106,6 +108,8 @@ export interface ParseContext {
   log: StageLogger
   /** Date.now() at pipeline start; stages may use it for budget decisions. */
   startedAt: number
+  /** Inferred date field order for the document (DD/MM vs MM/DD). */
+  dateFormat?: DateFieldOrder
 }
 
 /**

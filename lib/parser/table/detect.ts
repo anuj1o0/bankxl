@@ -15,6 +15,7 @@ import { buildLines, coalesceCells } from './lines'
 import { expandCompoundHeaderCells, matchHeaderCell, scoreHeaderLine } from './header-lexicon'
 import { looksLikeAmount, looksLikeDate } from './patterns'
 import { mergeContinuationRows, type CandidateRow, type UnmergedTable } from './merge'
+import { extractWithoutHeader } from './sequence-fallback'
 import type { Cell, ColumnAnchor, Line, TableDetectionOutput } from './types'
 
 /** A line starting with any of these (normalized) ends the table region. */
@@ -29,6 +30,11 @@ const FOOTER_PHRASES: ReadonlyArray<string> = [
   'this is a computer generated',
   'registered office',
   'unless the constituent notifies',
+  'disclaimer',
+  'end of statement',
+  'customer care',
+  'abbreviations',
+  'important please',
 ]
 
 /** Data gap (multiples of nominal row spacing) that ends the table region. */
@@ -132,31 +138,84 @@ function detectHeader(lines: ReadonlyArray<Line>): HeaderDetection | null {
       best = { index, line, cells, fields: score.cellFields, score: score.matchedFields.length }
     }
   })
+
+  // Fallback: stacked multi-line headers where date and money fields sit on
+  // separate lines. Accept any line with ≥2 fields that has EITHER date OR
+  // money, then verify adjacent lines (±2) supply the missing half.
+  if (!best) {
+    lines.forEach((line, index) => {
+      const cells = expandCompoundHeaderCells(coalesceCells(line))
+      if (cells.length < 2) return
+      const score = scoreHeaderLine(cells)
+      if (score.matchedFields.length < 2) return
+
+      const hasDate = score.matchedFields.includes('date') || score.matchedFields.includes('valueDate')
+      const hasMoney = score.matchedFields.some(f => f === 'debit' || f === 'credit' || f === 'amount' || f === 'balance')
+      if (!hasDate && !hasMoney) return
+
+      const maxGap = Math.max(line.height, 10) * 3
+      let neighborDate = hasDate
+      let neighborMoney = hasMoney
+      for (const offset of [-2, -1, 1, 2]) {
+        const neighbor = lines[index + offset]
+        if (!neighbor || Math.abs(neighbor.y - line.y) > maxGap) continue
+        for (const cell of coalesceCells(neighbor)) {
+          const field = matchHeaderCell(cell.text)
+          if (field === 'date' || field === 'valueDate') neighborDate = true
+          if (field === 'debit' || field === 'credit' || field === 'amount' || field === 'balance') neighborMoney = true
+        }
+        if (neighborDate && neighborMoney) break
+      }
+      if (!neighborDate || !neighborMoney) return
+
+      if (!best || score.matchedFields.length > best.score) {
+        best = { index, line, cells, fields: score.cellFields, score: score.matchedFields.length }
+      }
+    })
+  }
+
   if (!best) return null
   const chosen: HeaderCandidate = best
 
   const anchors = chosen.cells.map((c, i) => ({ x: c.x, xEnd: c.xEnd, text: c.text, field: chosen.fields[i] }))
 
   // Absorb header fragments from the lines directly above/below the header.
-  const maxGap = Math.max(chosen.line.height, 10) * 2.5
-  for (const neighborIdx of [chosen.index - 1, chosen.index + 1]) {
+  // Check ±2 lines to handle 3-line stacked headers.
+  let maxAbsorbedY = chosen.line.y + chosen.line.height
+  const maxGap = Math.max(chosen.line.height, 10) * 3
+  for (const neighborIdx of [chosen.index - 2, chosen.index - 1, chosen.index + 1, chosen.index + 2]) {
     const neighbor = lines[neighborIdx]
     if (!neighbor) continue
     if (Math.abs(neighbor.y - chosen.line.y) > maxGap) continue
     for (const cell of coalesceCells(neighbor)) {
       const field = matchHeaderCell(cell.text)
       if (!field) continue
-      // Only absorb into x-space no existing anchor covers — a fragment
-      // over an existing column is a stacked label, not a new column.
-      const overlaps = anchors.some(a => cell.xEnd >= a.x && cell.x <= a.xEnd)
-      if (overlaps) continue
+      const overlapIdx = anchors.findIndex(a => cell.xEnd >= a.x && cell.x <= a.xEnd)
+      if (overlapIdx >= 0) {
+        if (anchors[overlapIdx].field === null) {
+          const combined = `${anchors[overlapIdx].text} ${cell.text}`
+          anchors[overlapIdx].field = matchHeaderCell(combined) ?? field
+          anchors[overlapIdx].text = combined
+          anchors[overlapIdx].x = Math.min(anchors[overlapIdx].x, cell.x)
+          anchors[overlapIdx].xEnd = Math.max(anchors[overlapIdx].xEnd, cell.xEnd)
+          maxAbsorbedY = Math.max(maxAbsorbedY, neighbor.y + neighbor.height)
+        }
+        continue
+      }
       anchors.push({ x: cell.x, xEnd: cell.xEnd, text: cell.text, field })
+      maxAbsorbedY = Math.max(maxAbsorbedY, neighbor.y + neighbor.height)
     }
   }
 
   anchors.sort((a, b) => a.x - b.x)
+
+  // Use the lowest absorbed line's y so data starts after ALL header lines.
+  const headerLine: Line = maxAbsorbedY > chosen.line.y + chosen.line.height
+    ? { y: maxAbsorbedY - chosen.line.height, height: chosen.line.height, items: chosen.line.items }
+    : chosen.line
+
   return {
-    line: chosen.line,
+    line: headerLine,
     columns: anchors.map((a, i) => ({
       index: i,
       xStart: a.x,
@@ -214,7 +273,20 @@ export class TableDetectionStage implements PipelineStage<PdfTextContent, TableD
       candidatePages++
 
       const lines = buildLines(page.items)
-      const header = detectHeader(lines)
+      let header = detectHeader(lines)
+
+      // Continuation pages often have mangled headers where letterhead text
+      // merges into the header row (e.g. "HDFC BANKDateNarration"). When the
+      // inherited columns have MORE useful fields, prefer them — a 4-field
+      // mangled header should not replace a clean 6-field inherited one.
+      if (header && previousColumns) {
+        const newFieldCount = header.columns.filter(c => c.suggestedField != null).length
+        const inheritedFieldCount = previousColumns.filter(c => c.suggestedField != null).length
+        if (inheritedFieldCount > newFieldCount) {
+          header = null
+        }
+      }
+
       // Explicit annotation: `columns` feeds `previousColumns` at the loop
       // bottom, and without it TS flags the mutual reference as TS7022.
       const columns: ColumnAnchor[] | null = header?.columns ?? previousColumns
@@ -267,6 +339,26 @@ export class TableDetectionStage implements PipelineStage<PdfTextContent, TableD
     const nonEmpty = tables.filter(t => t.rows.length > 0)
 
     if (nonEmpty.length === 0) {
+      // Headerless fallback: scan raw lines for [Date][Text][Amount] sequences.
+      const allPageLines = input.pages
+        .filter(p => p.items.length > 0)
+        .map(p => ({ pageNumber: p.pageNumber, lines: buildLines(p.items) }))
+      const fallbackTables = extractWithoutHeader(allPageLines)
+      if (fallbackTables && fallbackTables.some(t => t.rows.length > 0)) {
+        warnings.push({ code: 'HEADERLESS_FALLBACK', message: 'no tabular header found; using sequence-based extraction' })
+        const totalFallbackRows = fallbackTables.reduce((s, t) => s + t.rows.length, 0)
+        ctx.log.info('tables_detected', {
+          tables: fallbackTables.length,
+          rows: totalFallbackRows,
+          inheritedHeaders: 0,
+          headerless: true,
+        })
+        return {
+          data: { tables: fallbackTables },
+          confidence: candidatePages === 0 ? 0 : 0.6,
+          warnings,
+        }
+      }
       throw new ParserError('NO_TABLE_FOUND', 'No transaction table found on any page', 'table-detection', {
         pages: input.totalPages,
       })

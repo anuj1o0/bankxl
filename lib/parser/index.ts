@@ -28,6 +28,7 @@ import { RowParsingStage } from './rows/parse-row'
 import { ValidationStage } from './validate/validate'
 import type { ValidationReport } from './validate/types'
 import type { BankDetectionResult } from './banks/types'
+import { isOcrAvailable, ocrExtract, mergeOcrPages } from './ocr/ocr-extract'
 
 export { PARSER_VERSION } from './core/version'
 export { ParserError } from './core/errors'
@@ -76,20 +77,39 @@ export async function parseStatement(
   const stageTimings: Record<string, number> = {}
   const warnings: StageWarning[] = []
 
-  const extracted = await runStage(new PdfTextExtractionStage(), pdfBuffer, ctx)
+  let extracted = await runStage(new PdfTextExtractionStage(), pdfBuffer, ctx)
   stageTimings['pdf-extraction'] = extracted.durationMs
   warnings.push(...extracted.warnings)
 
   const classified = await runStage(new DocumentClassificationStage(), extracted.data, ctx)
   stageTimings['classification'] = classified.durationMs
   warnings.push(...classified.warnings)
+
+  // Route scanned/mixed documents through local OCR when available.
   if (classified.data.kind !== 'digital') {
-    throw new ParserError(
-      'OCR_UNAVAILABLE',
-      `Document is ${classified.data.kind} (${classified.data.scannedPageCount} page(s) without a text layer) and no OCR stage exists yet`,
-      'classification',
-      { kind: classified.data.kind, scannedPages: classified.data.scannedPageCount }
-    )
+    const ocrReady = await isOcrAvailable()
+    if (!ocrReady) {
+      throw new ParserError(
+        'OCR_UNAVAILABLE',
+        `Document is ${classified.data.kind} (${classified.data.scannedPageCount} scanned page(s)). Install tesseract.js and canvas for OCR support.`,
+        'classification',
+        { kind: classified.data.kind, scannedPages: classified.data.scannedPageCount }
+      )
+    }
+
+    const ocrStart = Date.now()
+    const scannedPageNums = classified.data.pages
+      .filter(p => p.kind === 'scanned')
+      .map(p => p.pageNumber)
+
+    ctx.log.info('ocr_start', { pages: scannedPageNums.length })
+    const ocrPages = await ocrExtract(pdfBuffer, scannedPageNums, { log: ctx.log })
+    extracted.data = mergeOcrPages(extracted.data, ocrPages)
+    stageTimings['ocr'] = Date.now() - ocrStart
+    warnings.push({
+      code: 'OCR_APPLIED',
+      message: `${ocrPages.length} scanned page(s) processed via local Tesseract OCR`,
+    })
   }
 
   const metaStage = await runStage(new MetadataExtractionStage(), extracted.data, ctx)

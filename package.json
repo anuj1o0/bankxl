@@ -26,7 +26,8 @@
     "razorpay": "^2.9.6",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
-    "sharp": "^0.33.4"
+    "sharp": "^0.33.4",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

@@ -64,8 +64,26 @@ const LEXICON: ReadonlyArray<{ phrase: string; field: CanonicalField }> = [
   { phrase: 'credits', field: 'credit' },
   { phrase: 'balance', field: 'balance' },
   { phrase: 'amount', field: 'amount' },
+  { phrase: 'amt', field: 'amount' },
   { phrase: 'reference', field: 'reference' },
   { phrase: 'utr', field: 'reference' },
+  // International synonyms
+  { phrase: 'montant', field: 'amount' },
+  { phrase: 'betrag', field: 'amount' },
+  { phrase: 'importe', field: 'amount' },
+  { phrase: 'fecha', field: 'date' },
+  { phrase: 'datum', field: 'date' },
+  { phrase: 'solde', field: 'balance' },
+  { phrase: 'saldo', field: 'balance' },
+  { phrase: 'concepto', field: 'description' },
+  { phrase: 'libelle', field: 'description' },
+  { phrase: 'verwendungszweck', field: 'description' },
+  { phrase: 'retrait', field: 'debit' },
+  { phrase: 'versement', field: 'credit' },
+  { phrase: 'haben', field: 'credit' },
+  { phrase: 'soll', field: 'debit' },
+  { phrase: 'debe', field: 'debit' },
+  { phrase: 'haber', field: 'credit' },
 ]
 
 /** Lowercase, strip punctuation to spaces, collapse whitespace. */
@@ -160,15 +178,36 @@ function findFieldMatches(text: string): FieldMatch[] {
  * @param text - Header cell text as printed (e.g. "Chq./Ref.No.").
  * @returns The suggested field, or null when nothing in the lexicon matches.
  */
+function levenshtein(a: string, b: string): number {
+  if (a.length === 0) return b.length
+  if (b.length === 0) return a.length
+  const matrix: number[][] = []
+  for (let i = 0; i <= a.length; i++) matrix[i] = [i]
+  for (let j = 0; j <= b.length; j++) matrix[0][j] = j
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1
+      matrix[i][j] = Math.min(matrix[i - 1][j] + 1, matrix[i][j - 1] + 1, matrix[i - 1][j - 1] + cost)
+    }
+  }
+  return matrix[a.length][b.length]
+}
+
 export function matchHeaderCell(text: string): CanonicalField | null {
   const norm = normalize(text)
   if (norm.length === 0) return null
   for (const entry of LEXICON) {
     if (norm === entry.phrase) return entry.field
   }
-  // Substring pass for decorated headers like "Withdrawal Amt (INR)".
   for (const entry of LEXICON) {
     if (norm.includes(entry.phrase)) return entry.field
+  }
+  // Fuzzy fallback: tolerate OCR typos (edit distance ≤ 2) on single-word
+  // lexicon entries ≥ 4 chars. Multi-word phrases are too ambiguous for fuzzy.
+  for (const entry of LEXICON) {
+    if (entry.phrase.includes(' ') || entry.phrase.length < 4) continue
+    if (Math.abs(norm.length - entry.phrase.length) > 2) continue
+    if (levenshtein(norm, entry.phrase) <= 2) return entry.field
   }
   return null
 }

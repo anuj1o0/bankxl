@@ -84,7 +84,7 @@ export class MetadataExtractionStage implements PipelineStage<PdfTextContent, St
       }
       if (meta.periodFrom === null && /statement|period|\bfrom\b/i.test(text)) {
         const dates = (text.match(DATE_TOKEN_RE) ?? [])
-          .map(parseStatementDate)
+          .map(d => parseStatementDate(d))
           .filter((d): d is string => d !== null)
         if (dates.length >= 2) {
           meta.periodFrom = dates[0]

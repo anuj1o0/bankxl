@@ -71,23 +71,35 @@ function runChain(
   return { checkableLinks: checkable, reconciledLinks: reconciled, breaks, closingMatched }
 }
 
-/**
- * Reconciles the running-balance chain of a statement.
- *
- * @param transactions - Canonical transactions in extracted order.
- * @param meta - Statement metadata; opening/closing balances join the chain
- *   as first/last links when present.
- * @returns The better of the forward and reverse reconciliations. `fraction`
- *   is 1 and `impossible` true when nothing was checkable (no printed
- *   balances or fewer than the needed anchors).
- */
+/** Swaps debit↔credit when balance direction disagrees with the assignment. */
+function repairDebitCredit(transactions: ParsedTransaction[]): void {
+  let prev: number | null = null
+  for (const tx of transactions) {
+    if (!isUsableAmount(tx.balance)) continue
+    if (prev === null) {
+      prev = tx.balance
+      continue
+    }
+    const balanceDelta = tx.balance - prev
+    const hasOnlyDebit = isUsableAmount(tx.debit) && !isUsableAmount(tx.credit)
+    const hasOnlyCredit = !isUsableAmount(tx.debit) && isUsableAmount(tx.credit)
+
+    if (hasOnlyDebit && balanceDelta > 0 && amountsEqual(balanceDelta, tx.debit!)) {
+      tx.credit = tx.debit
+      tx.debit = null
+    } else if (hasOnlyCredit && balanceDelta < 0 && amountsEqual(-balanceDelta, tx.credit!)) {
+      tx.debit = tx.credit
+      tx.credit = null
+    }
+    prev = tx.balance
+  }
+}
+
 export function reconcileBalances(
   transactions: ReadonlyArray<ParsedTransaction>,
   meta: Pick<StatementMetadata, 'openingBalance' | 'closingBalance'>
 ): ReconciliationResult {
   const forward = runChain(transactions, meta.openingBalance, meta.closingBalance)
-  // Newest-first statements read as a valid chain when reversed; opening and
-  // closing keep their roles relative to TIME, so they swap positions.
   const reverse = runChain([...transactions].reverse(), meta.openingBalance, meta.closingBalance)
 
   const pick = (run: DirectionRun, direction: Exclude<ChainDirection, 'unknown'>): ReconciliationResult => ({
@@ -106,6 +118,30 @@ export function reconcileBalances(
 
   const forwardScore = forward.checkableLinks === 0 ? -1 : forward.reconciledLinks / forward.checkableLinks
   const reverseScore = reverse.checkableLinks === 0 ? -1 : reverse.reconciledLinks / reverse.checkableLinks
-  // Ties go forward: chronological order is the overwhelmingly common case.
+  const bestScore = Math.max(forwardScore, reverseScore)
+
+  // When reconciliation is imperfect, try repairing debit/credit using
+  // balance direction. Covers single-column amounts, wrong-column PDFs,
+  // and OCR that loses Dr/Cr markers.
+  if (bestScore < 0.95 && transactions.length >= 3) {
+    const mutable = transactions.map(tx => ({ ...tx }))
+    repairDebitCredit(mutable)
+    const repairedFwd = runChain(mutable, meta.openingBalance, meta.closingBalance)
+    const repairedRev = runChain([...mutable].reverse(), meta.openingBalance, meta.closingBalance)
+    const repairedFwdScore = repairedFwd.checkableLinks === 0 ? -1 : repairedFwd.reconciledLinks / repairedFwd.checkableLinks
+    const repairedRevScore = repairedRev.checkableLinks === 0 ? -1 : repairedRev.reconciledLinks / repairedRev.checkableLinks
+    const repairedBest = repairedFwdScore >= repairedRevScore ? repairedFwd : repairedRev
+    const repairedDir: Exclude<ChainDirection, 'unknown'> = repairedFwdScore >= repairedRevScore ? 'forward' : 'reverse'
+    const repairedScore = Math.max(repairedFwdScore, repairedRevScore)
+    if (repairedScore > bestScore + 0.02) {
+      for (let i = 0; i < transactions.length; i++) {
+        const orig = transactions[i] as ParsedTransaction
+        orig.debit = mutable[i].debit
+        orig.credit = mutable[i].credit
+      }
+      return pick(repairedBest, repairedDir)
+    }
+  }
+
   return reverseScore > forwardScore ? pick(reverse, 'reverse') : pick(forward, 'forward')
 }

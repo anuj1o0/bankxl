@@ -20,7 +20,8 @@ import { ParserError } from '../core/errors'
 import type { ParseContext, ParsedTransaction, PipelineStage, StageResult, StageWarning } from '../core/types'
 import type { BankRules } from '../banks/types'
 import type { ColumnMapping, HeaderMappingOutput } from '../map/header-map'
-import { parseStatementDate } from './parse-date'
+import { parseStatementDate, inferDateFormat } from './parse-date'
+import type { DateFieldOrder } from '../core/types'
 
 export interface RowParsingInput {
   mapped: HeaderMappingOutput
@@ -118,10 +119,24 @@ export class RowParsingStage implements PipelineStage<RowParsingInput, RowParsin
     let inheritedDates = 0
     let lastDate: string | null = null
 
+    // Infer DD/MM vs MM/DD from all date cells across all tables.
+    const dateOrder: DateFieldOrder = ctx.dateFormat ?? (() => {
+      const dateCells: string[] = []
+      for (const { table, mapping } of input.mapped.tables) {
+        for (const row of table.rows) {
+          const d = cellAt(row.cells, mapping.date)
+          if (d.trim()) dateCells.push(d)
+        }
+      }
+      const inferred = inferDateFormat(dateCells)
+      ctx.dateFormat = inferred
+      return inferred
+    })()
+
     for (const { table, mapping } of input.mapped.tables) {
       for (const row of table.rows) {
         const { debit, credit } = parseMoney(row.cells, mapping)
-        const rawDate = parseStatementDate(cellAt(row.cells, mapping.date))
+        const rawDate = parseStatementDate(cellAt(row.cells, mapping.date), dateOrder)
 
         // Junk = junk-shaped text WITHOUT full transaction structure. An
         // "OPENING BALANCE" row has a date+balance but no debit/credit; a

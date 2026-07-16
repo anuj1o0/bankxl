@@ -19,9 +19,9 @@ import { buildLines, coalesceCells } from '../table/lines'
 import { getRegisteredBanks, findByIfscPrefix } from './registry'
 import type { BankDetectionResult, BankRules } from './types'
 
-const SCAN_PAGE_LIMIT = 2
+const SCAN_PAGE_LIMIT = 1
 /** Lines from the top of each scanned page considered letterhead. */
-const SCAN_LINE_LIMIT = 20
+const SCAN_LINE_LIMIT = 15
 
 /** IFSC shape: 4 letters, a zero, 6 alphanumerics — e.g. HDFC0001234. */
 const IFSC_RE = /\b([A-Z]{4})0[A-Z0-9]{6}\b/g

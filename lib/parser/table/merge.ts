@@ -100,11 +100,15 @@ export function mergeContinuationRows(tables: ReadonlyArray<UnmergedTable>): {
           orphaned++
           continue
         }
-        const fragment = cand.cells[descIdx]?.trim() || text
-        if (fragment.length > 0) {
-          lastRow.cells[lastRowDescIdx] = `${lastRow.cells[lastRowDescIdx]} ${fragment}`.trim()
-          lastRow.mergedLines++
+        let merged = false
+        for (let colIdx = 0; colIdx < Math.min(cand.cells.length, lastRow.cells.length); colIdx++) {
+          const frag = cand.cells[colIdx]?.trim()
+          if (frag && frag.length > 0) {
+            lastRow.cells[colIdx] = `${lastRow.cells[colIdx]} ${frag}`.trim()
+            merged = true
+          }
         }
+        if (merged) lastRow.mergedLines++
         lastYEnd = cand.yEnd
         lastPage = cand.page
         continue
