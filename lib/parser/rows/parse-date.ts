@@ -92,7 +92,7 @@ export function inferDateFormat(texts: ReadonlyArray<string>): DateFieldOrder {
     if (a > 12) slot1Over12++
     if (b > 12) slot2Over12++
   }
-  if (slot1Over12 > 0 && slot2Over12 === 0) return 'mdy'
-  if (slot2Over12 > 0 && slot1Over12 === 0) return 'dmy'
+  if (slot1Over12 > 0 && slot2Over12 === 0) return 'dmy'
+  if (slot2Over12 > 0 && slot1Over12 === 0) return 'mdy'
   return 'dmy'
 }
