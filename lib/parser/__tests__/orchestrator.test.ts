@@ -3,8 +3,13 @@
  * including the metadata-anchored validation (opening + closing balances
  * from the letterhead join the reconciliation chain).
  */
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { parseStatement, ParserError, toLegacyTransactions, toLegacyMeta, PARSER_VERSION } from '../index'
+
+vi.mock('../ocr/ocr-extract', async () => {
+  const actual = await vi.importActual('../ocr/ocr-extract')
+  return { ...actual, isOcrAvailable: vi.fn().mockResolvedValue(false) }
+})
 import { createSilentLogger } from '../core/logger'
 import { makeDigitalPdf, makeScannedLikePdf, makeStatementPdf } from '../../../tests/helpers/pdf-fixtures'
 

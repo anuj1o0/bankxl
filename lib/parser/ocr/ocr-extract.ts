@@ -66,7 +66,8 @@ export async function ocrExtract(
   const dpi = options.dpi ?? 300
 
   const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs')
-  const doc = await pdfjsLib.getDocument({ data: new Uint8Array(pdfBuffer) }).promise
+  const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(pdfBuffer) })
+  const doc = await loadingTask.promise
 
   const pages: PageText[] = []
   const worker = await Tesseract.createWorker(langs)
@@ -115,7 +116,7 @@ export async function ocrExtract(
     }
   } finally {
     await worker.terminate()
-    await (doc as any).destroy()
+    await loadingTask.destroy().catch(() => undefined)
   }
 
   return pages
