@@ -43,7 +43,7 @@ export function looksLikeAmount(text: string): boolean {
   if (t.length === 0 || t.length > 24) return false
   t = t
     .replace(/^(rs\.?|inr|₹)\s*/i, '')
-    .replace(/\s*(dr|cr|od)\.?$/i, '') // Dr/Cr markers, OD = overdrawn
+    .replace(/\s*\(?(?:dr|cr|od)\)?\.?\s*$/i, '')
     .replace(/^\((.*)\)$/, '$1') // (1,234.56) accounting negative
     .replace(/^-/, '')
     .trim()

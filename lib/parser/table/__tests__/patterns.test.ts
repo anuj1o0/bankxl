@@ -31,6 +31,9 @@ describe('looksLikeAmount', () => {
     '450.50 Dr',
     '(500.00)', // accounting negative
     '-750.25',
+    '1,377.00(Dr)', // Kotak parenthesized Dr suffix
+    '1,04,000.00(Cr)', // Kotak parenthesized Cr suffix
+    '3,10,045.55(Cr)', // Kotak balance with Cr
   ])('accepts %s', s => {
     expect(looksLikeAmount(s)).toBe(true)
   })

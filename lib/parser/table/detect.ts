@@ -57,16 +57,20 @@ function isFooterLine(cells: ReadonlyArray<Cell>): boolean {
 }
 
 function nearestColumn(x: number, xEnd: number, columns: ReadonlyArray<ColumnAnchor>): number {
-  let best = 0
-  let bestDist = Number.POSITIVE_INFINITY
+  let overlapCol = -1
   for (const col of columns) {
-    const d = xEnd >= col.xStart && x <= col.xEnd ? 0 : x > col.xEnd ? x - col.xEnd : col.xStart - xEnd
-    if (d < bestDist) {
-      bestDist = d
-      best = col.index
+    if (xEnd >= col.xStart && x <= col.xEnd) {
+      if (overlapCol >= 0) { overlapCol = -1; break }
+      overlapCol = col.index
     }
   }
-  return best
+  if (overlapCol >= 0) return overlapCol
+
+  const mid = (x + xEnd) / 2
+  for (let i = columns.length - 1; i >= 0; i--) {
+    if (mid >= columns[i].xStart) return columns[i].index
+  }
+  return columns[0].index
 }
 
 /**
@@ -196,6 +200,15 @@ function detectHeader(lines: ReadonlyArray<Line>): HeaderDetection | null {
           const combined = `${anchors[overlapIdx].text} ${cell.text}`
           anchors[overlapIdx].field = matchHeaderCell(combined) ?? field
           anchors[overlapIdx].text = combined
+          anchors[overlapIdx].x = Math.min(anchors[overlapIdx].x, cell.x)
+          anchors[overlapIdx].xEnd = Math.max(anchors[overlapIdx].xEnd, cell.xEnd)
+          maxAbsorbedY = Math.max(maxAbsorbedY, neighbor.y + neighbor.height)
+        } else if (
+          (anchors[overlapIdx].field === 'debit' && field === 'credit') ||
+          (anchors[overlapIdx].field === 'credit' && field === 'debit')
+        ) {
+          anchors[overlapIdx].field = 'amount'
+          anchors[overlapIdx].text = `${anchors[overlapIdx].text} ${cell.text}`
           anchors[overlapIdx].x = Math.min(anchors[overlapIdx].x, cell.x)
           anchors[overlapIdx].xEnd = Math.max(anchors[overlapIdx].xEnd, cell.xEnd)
           maxAbsorbedY = Math.max(maxAbsorbedY, neighbor.y + neighbor.height)

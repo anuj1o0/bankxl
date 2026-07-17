@@ -59,6 +59,7 @@ const CR_MARKER_RE = /^cr/i
 function hasNegativeMarker(raw: string): boolean {
   const t = raw.trim()
   if (NEG_SUFFIX_RE.test(t)) return true
+  if (/\((?:dr|od)\)\s*$/i.test(t)) return true
   return /^\(.*\)$/.test(t.replace(NEG_SUFFIX_RE, '').trim())
 }
 
@@ -99,9 +100,11 @@ function parseMoney(
     return CR_MARKER_RE.test(marker) ? { debit: null, credit: amount } : { debit: amount, credit: null }
   }
   if (mapping.amount !== undefined) {
-    const amount = parseAmount(cellAt(cells, mapping.amount))
+    const raw = cellAt(cells, mapping.amount)
+    const amount = parseAmount(raw)
     if (amount === null) return { debit: null, credit: null }
-    return { debit: amount, credit: null }
+    const isCredit = /\bcr\b|\(cr\)/i.test(raw)
+    return isCredit ? { debit: null, credit: amount } : { debit: amount, credit: null }
   }
   return {
     debit: parseAmount(cellAt(cells, mapping.debit)),

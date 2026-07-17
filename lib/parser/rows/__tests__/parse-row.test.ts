@@ -174,6 +174,27 @@ describe('RowParsingStage', () => {
     ).rejects.toMatchObject({ name: 'ParserError', code: 'NO_TABLE_FOUND', stage: 'row-parsing' })
   })
 
+  it('detects embedded (Cr) marker in standalone amount column', async () => {
+    const amountMapping: ColumnMapping = { date: 0, description: 1, amount: 2, balance: 3 }
+    const result = await parse([
+      mapped(amountMapping, [
+        row(['01/04/2026', 'SALARY', '1,04,000.00(Cr)', '4,14,045.55']),
+        row(['01/04/2026', 'UPI PAYMENT', '1,377.00(Dr)', '4,12,668.55']),
+        row(['02/04/2026', 'ATM WITHDRAWAL', '2,700.00', '4,09,968.55']),
+      ]),
+    ])
+    expect(result.data.transactions[0]).toMatchObject({ debit: null, credit: 104000 })
+    expect(result.data.transactions[1]).toMatchObject({ debit: 1377, credit: null })
+    expect(result.data.transactions[2]).toMatchObject({ debit: 2700, credit: null })
+  })
+
+  it('treats parenthesized (Dr) balance suffix as overdraft negative', async () => {
+    const result = await parse([
+      mapped(SIX_COL, [row(['01/04/2026', 'OVERDRAFT', '', '5,000.00', '', '3,000.00(Dr)'])]),
+    ])
+    expect(result.data.transactions[0].balance).toBe(-3000)
+  })
+
   it('normalizes whitespace in merged multiline descriptions', async () => {
     const result = await parse([
       mapped(SIX_COL, [row(['01/04/2026', 'UPI/DR/1  GROCERY   MART', '', '100.00', '', '900.00'])]),
