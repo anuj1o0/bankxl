@@ -9,7 +9,7 @@ const nextConfig = {
     // companion, and pdfjs's worker setup then fails at runtime ("Cannot
     // find module '...vendor-chunks/pdf.worker.mjs'"). Loading it from
     // node_modules keeps the worker file next to the library.
-    serverComponentsExternalPackages: ['sharp', 'pdf-parse', 'exceljs', 'pdfjs-dist'],
+    serverComponentsExternalPackages: ['sharp', 'pdf-parse', 'exceljs', 'pdfjs-dist', 'canvas', 'tesseract.js'],
   },
   // NOTE: do NOT add a www<->apex redirect here without first checking
   // Vercel's dashboard (Project → Settings → Domains). An app-level redirect
