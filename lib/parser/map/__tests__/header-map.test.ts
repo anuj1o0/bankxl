@@ -83,13 +83,12 @@ describe('resolveMapping', () => {
     ).toBeNull()
   })
 
-  it('returns null when Amount lacks a Dr/Cr companion', () => {
-    expect(
-      resolveMapping(
-        table([col(0, 'Date', 'date'), col(1, 'Particulars', 'description'), col(2, 'Amount', 'amount')]),
-        null
-      )
-    ).toBeNull()
+  it('accepts standalone Amount without Dr/Cr for headerless single-column statements', () => {
+    const mapping = resolveMapping(
+      table([col(0, 'Date', 'date'), col(1, 'Particulars', 'description'), col(2, 'Amount', 'amount')]),
+      null
+    )
+    expect(mapping).toMatchObject({ date: 0, description: 1, amount: 2 })
   })
 
   it('applies bank header overrides before generic resolution', () => {

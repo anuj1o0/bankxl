@@ -98,6 +98,11 @@ function parseMoney(
     const marker = cellAt(cells, mapping.drcr).trim()
     return CR_MARKER_RE.test(marker) ? { debit: null, credit: amount } : { debit: amount, credit: null }
   }
+  if (mapping.amount !== undefined) {
+    const amount = parseAmount(cellAt(cells, mapping.amount))
+    if (amount === null) return { debit: null, credit: null }
+    return { debit: amount, credit: null }
+  }
   return {
     debit: parseAmount(cellAt(cells, mapping.debit)),
     credit: parseAmount(cellAt(cells, mapping.credit)),

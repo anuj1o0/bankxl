@@ -77,7 +77,7 @@ export function resolveMapping(table: DetectedTable, bank: BankRules | null): Co
   const hasMoney =
     mapping.debit !== undefined ||
     mapping.credit !== undefined ||
-    (mapping.amount !== undefined && mapping.drcr !== undefined)
+    mapping.amount !== undefined
   if (mapping.date === undefined || mapping.description === undefined || !hasMoney) {
     return null
   }
