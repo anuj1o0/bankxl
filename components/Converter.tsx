@@ -1,6 +1,7 @@
 'use client'
 import { useState, useRef } from 'react'
 import { track } from '@/lib/track'
+import { convertPdf, ConvertError, type ConvertOutput } from '@/lib/convert-client'
 
 interface Props {
   user: any
@@ -53,73 +54,79 @@ export default function Converter({ user, freeMode, initialFormat = 'excel', sho
     track('upload_started', { format })
     setStage('converting'); setProgress(0); setActiveStep(0)
 
+    // Simulated progress animation for the single-request path (which has
+    // no intermediate signals). The moment the chunked pipeline reports
+    // real per-chunk progress, `real.on` flips and the animation yields to
+    // actual numbers — page 30 of 178 shows real movement, not a guess.
+    const real = { on: false }
     const steps = [
       { end: 25, delay: 700 },
       { end: 55, delay: 1500 },
       { end: 90, delay: 4500 },
     ]
+    // setInterval, NOT requestAnimationFrame: browsers pause rAF entirely in
+    // hidden tabs, and convert() awaits these promises — with rAF, a user who
+    // switched tabs right after clicking Convert saw the conversion "stuck"
+    // forever even though the server had finished. Intervals keep firing
+    // (throttled) in background tabs, so the awaits always resolve.
     let prog = 0
     const runStep = (i: number) => {
+      if (real.on) return Promise.resolve()
       setActiveStep(i)
       const target = steps[i].end
       const duration = steps[i].delay
       const start = prog
       const startTime = Date.now()
       return new Promise<void>(res => {
-        const tick = () => {
+        const iv = setInterval(() => {
+          if (real.on) { clearInterval(iv); res(); return }
           const t = Math.min((Date.now() - startTime) / duration, 1)
           const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t
           prog = start + (target - start) * ease
           setProgress(prog)
-          if (t < 1) requestAnimationFrame(tick); else res()
-        }
-        requestAnimationFrame(tick)
+          if (t >= 1) { clearInterval(iv); res() }
+        }, 50)
       })
     }
 
-    const formData = new FormData()
-    formData.append('pdf', file)
-    formData.append('format', format)
-
-    const apiPromise = fetch('/api/convert', { method: 'POST', body: formData })
+    const apiPromise = convertPdf(file, format, {
+      onProgress: p => {
+        if (p.phase === 'extracting' && p.chunksTotal) {
+          real.on = true
+          setActiveStep(1)
+          setProgress(25 + 65 * ((p.chunksDone ?? 0) / p.chunksTotal))
+        } else if (p.phase === 'building') {
+          real.on = true
+          setActiveStep(2)
+          setProgress(93)
+        }
+      },
+    })
     await runStep(0)
     runStep(1)
 
-    let response: Response
+    let out: ConvertOutput
     try {
-      response = await apiPromise
-    } catch {
-      track('conversion_failed', { format, reason: 'network_error' })
-      setStage('error'); setError('Network error. Check your connection.'); return
+      out = await apiPromise
+    } catch (e: any) {
+      const isNetwork = !(e instanceof ConvertError)
+      track('conversion_failed', { format, reason: isNetwork ? 'network_error' : (e.canTopup ? 'usage_limit' : 'extraction_error') })
+      setStage('error')
+      setError(isNetwork ? 'Network error. Check your connection.' : (e.message || 'Conversion failed.'))
+      return
     }
 
-    runStep(2)
-
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({}))
-      track('conversion_failed', { format, reason: data.canTopup ? 'usage_limit' : 'extraction_error' })
-      setStage('error'); setError(data.error || 'Conversion failed.'); return
-    }
-
-    const blob = await response.blob()
-    const txCount = parseInt(response.headers.get('X-Transactions-Count') || '0')
-    const pages = parseInt(response.headers.get('X-Pages-Count') || '1')
-    const timeMs = parseInt(response.headers.get('X-Processing-Time') || '0')
-    const bank = response.headers.get('X-Bank-Name') || ''
-    const warningHeader = response.headers.get('X-Extraction-Warning')
-    const warning = warningHeader ? decodeURIComponent(warningHeader) : undefined
-
+    if (!real.on) runStep(2)
     setProgress(100); setActiveStep(3)
     await new Promise(r => setTimeout(r, 300))
 
-    const ext = format === 'excel' ? 'xlsx' : format === 'csv' ? 'csv' : format === 'json' ? 'json' : 'xml'
     setResult({
-      txCount, pages, bank, warning,
-      time: (timeMs / 1000).toFixed(1) + 's',
-      blob,
-      filename: file.name.replace(/\.pdf$/i, '') + '_bankxl.' + ext,
+      txCount: out.txCount, pages: out.pages, bank: out.bank, warning: out.warning,
+      time: (out.timeMs / 1000).toFixed(1) + 's',
+      blob: out.blob,
+      filename: out.filenameOut,
     })
-    track('conversion_complete', { format, pages, txCount, bank })
+    track('conversion_complete', { format, pages: out.pages, txCount: out.txCount, bank: out.bank })
     setStage('done')
   }
 

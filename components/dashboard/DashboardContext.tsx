@@ -92,6 +92,12 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     const { data: { user } } = await sb.auth.getUser()
     if (!user) { router.push('/login?redirect=/dashboard'); return }
     try {
+      // Conversions killed mid-flight (Vercel function timeout, closed tab)
+      // stay 'pending' in the DB forever unless cleaned — previously this
+      // only happened when the user found the manual button on the History
+      // page. Run it on every dashboard load so history reflects reality.
+      // Fire-and-forget: never let it delay or break the dashboard.
+      fetch('/api/conversions/cleanup', { method: 'POST' }).catch(() => {})
       const res = await fetch('/api/usage', { cache: 'no-store' })
       if (res.status === 401) {
         await sb.auth.signOut()

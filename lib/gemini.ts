@@ -18,7 +18,18 @@
  *
  * IMPORTANT: Enable Gemini billing at https://aistudio.google.com/app/apikey
  * Free tier: only 20 req/day per model → will hit limit quickly.
- * Paid tier: 1000+ RPM, no daily cap. Cost: ~₹0.05 per 20-page statement.
+ * Paid tier: 1000+ RPM, no daily cap.
+ *
+ * COST CONTROLS (all three matter — removing any one of them caused a real
+ * billing spike in the past):
+ *   1. thinkingConfig: thinking tokens are disabled (budget 0) on the Flash
+ *      models and minimized (128) on Pro — see thinkingConfigFor().
+ *   2. gemini-2.5-pro is retry-pass-only AND capped per document
+ *      (MAX_EXPENSIVE_RETRIES).
+ *   3. Compact positional-array output (see PROMPT) — keyed-object rows
+ *      were ~45% more output tokens for identical data.
+ *   4. Chunk size is 3 pages (pipeline.ts PAGES_PER_CHUNK) — sized so a
+ *      worst-case-density chunk's output generates within one call window.
  */
 
 export interface Transaction {
@@ -62,6 +73,31 @@ const BASE             = 'https://generativelanguage.googleapis.com/v1beta'
 const INLINE_THRESHOLD = 7 * 1024 * 1024  // 7 MB — use inline below this
 const MAX_OUTPUT_TOKENS = 65536            // max for all Flash models
 
+// Gemini 2.5 models "think" by default: internal reasoning tokens that are
+// billed as OUTPUT tokens (the expensive direction) and add anywhere from a
+// few to tens of seconds of latency per call. For structured extraction —
+// fixed JSON schema, temperature 0, "copy the rows you see" — thinking adds
+// no accuracy, but it was silently multiplying both the bill and the
+// latency (slow calls → timeouts → cascade to pricier models → more
+// thinking). flash and flash-lite accept thinkingBudget: 0 (fully off);
+// pro cannot be disabled below its minimum of 128.
+function thinkingConfigFor(model: string): { thinkingBudget: number } {
+  return { thinkingBudget: model === MODEL_LEGACY ? 128 : 0 }
+}
+
+// Per-request fetch timeouts. These are UPPER bounds — every call is also
+// clamped to whatever remains of the extraction deadline, so a fetch can
+// never outlive the budget the route gave us (previously each fetch had a
+// flat 50s timeout against a 42s total budget, so one slow call could
+// swallow the whole conversion).
+const SINGLE_CALL_TIMEOUT_MS = 45000  // whole-PDF calls (small statements)
+const CHUNK_CALL_TIMEOUT_MS  = 30000  // per-chunk calls (4 pages each)
+// Portion of the budget the parallel pass must leave for sequential retries.
+// Without this the parallel pass could run to the full deadline, and any
+// chunk that failed had zero time left to be retried — a partial result that
+// was entirely avoidable.
+const RETRY_RESERVE_MS = 15000
+
 // ─── Indian bank name hints for better detection ──────────────────────────────
 const BANK_HINTS = `
 Major Indian banks (detect from header/logo/letterhead/IFSC prefix):
@@ -77,6 +113,12 @@ IDBI Bank (IBKL), Bank of Maharashtra (MAHB), UCO Bank (UCBA),
 Punjab & Sind Bank (PSIB), Indian Overseas Bank (IOBA).
 Also detect: credit card statements (Amex, SBI Card, HDFC Credit Card, etc.)`.trim()
 
+// Transactions are emitted as POSITIONAL ARRAYS, not keyed objects. Keyed
+// rows repeat ~40 tokens of key names per transaction; on a dense statement
+// (measured: 195 tx across 4 pages) that was 20K output tokens per chunk —
+// more than the model can generate inside a serverless window, and billed
+// at output rates. Arrays cut output ~45%, which is simultaneously the
+// speed fix and a cost cut. parseResponse() maps them back to objects.
 const PROMPT = `Extract all data from this bank statement PDF.
 Return ONLY a single valid JSON object — no markdown, no code fences, no explanation.
 
@@ -97,15 +139,19 @@ Schema (every key required, use null if unknown):
     "total_pages": number|null
   },
   "transactions": [
-    {"date":"YYYY-MM-DD","description":"string","debit":number|null,"credit":number|null,"balance":number|null,"ref_no":"string|null"}
+    ["YYYY-MM-DD", "description", debit, credit, balance, "ref_no"]
   ]
 }
+
+Each transaction is a 6-element array, positions fixed:
+  [0] date "YYYY-MM-DD"  [1] description string  [2] debit number|null
+  [3] credit number|null  [4] balance number|null  [5] ref_no string|null
 
 Rules:
 - Amounts: plain numbers only, no commas, no currency symbols. E.g. 12400.50 not "12,400.50".
 - Dates: YYYY-MM-DD always. If year is missing, infer from statement period.
-- Debit (Dr/Withdrawal/Debit): debit=amount, credit=null.
-- Credit (Cr/Deposit/Credit): credit=amount, debit=null.
+- Debit (Dr/Withdrawal/Debit): position 2 = amount, position 3 = null.
+- Credit (Cr/Deposit/Credit): position 3 = amount, position 2 = null.
 - ref_no: UPI ref / UTR / cheque number / IMPS ref.
 - SKIP: header rows, page totals, "Brought Forward", "Carried Forward", opening/closing balance rows.
 - bank_name: NEVER return null or "Unknown". If you cannot determine the bank, return your best guess based on IFSC, logo, or format.
@@ -142,9 +188,12 @@ function markModelOverloaded(model: string) {
 // Small per-chunk delay before a parallel chunk fires its first request, so
 // the circuit breaker above gets a chance to help later chunks instead of
 // every chunk in a batch discovering an overloaded model at the same instant.
-function staggered<T>(fn: () => Promise<T>, index: number, stepMs = 250): Promise<T> {
+// Capped: with many chunks (a 178-page statement is ~30 chunks), an uncapped
+// 250ms-per-index stagger would burn 7+ seconds of the extraction budget
+// before the last chunk even started.
+function staggered<T>(fn: () => Promise<T>, index: number, stepMs = 150, maxDelayMs = 1500): Promise<T> {
   return new Promise((resolve, reject) => {
-    setTimeout(() => { fn().then(resolve, reject) }, index * stepMs)
+    setTimeout(() => { fn().then(resolve, reject) }, Math.min(index * stepMs, maxDelayMs))
   })
 }
 
@@ -252,7 +301,7 @@ function isDailyLimitError(msg: string): boolean {
 }
 
 // ─── Inline call (PDF < 7 MB) ─────────────────────────────────────────────────
-async function callGeminiInline(pdfBuffer: Buffer, apiKey: string, model: string): Promise<ExtractionResult> {
+async function callGeminiInline(pdfBuffer: Buffer, apiKey: string, model: string, timeoutMs: number = SINGLE_CALL_TIMEOUT_MS): Promise<ExtractionResult> {
   const t0 = Date.now()
   const res = await fetchWithRetry(`${BASE}/models/${model}:generateContent?key=${apiKey}`, {
     method: 'POST',
@@ -268,9 +317,10 @@ async function callGeminiInline(pdfBuffer: Buffer, apiKey: string, model: string
         temperature: 0,
         maxOutputTokens: MAX_OUTPUT_TOKENS,
         responseMimeType: 'application/json',
+        thinkingConfig: thinkingConfigFor(model),
       },
     }),
-    signal: AbortSignal.timeout(50000),
+    signal: AbortSignal.timeout(timeoutMs),
   }, `${model} inline`)
 
   console.log(`[gemini] ${model} inline: ${Date.now() - t0}ms status=${res.status}`)
@@ -323,7 +373,7 @@ async function uploadToFileAPI(pdfBuffer: Buffer, apiKey: string): Promise<strin
   return uri
 }
 
-async function callGeminiFile(pdfBuffer: Buffer, apiKey: string, model: string): Promise<ExtractionResult> {
+async function callGeminiFile(pdfBuffer: Buffer, apiKey: string, model: string, timeoutMs: number = SINGLE_CALL_TIMEOUT_MS): Promise<ExtractionResult> {
   const tUpload = Date.now()
   const fileUri = await uploadToFileAPI(pdfBuffer, apiKey)
   console.log(`[gemini] file upload: ${Date.now() - tUpload}ms`)
@@ -343,9 +393,10 @@ async function callGeminiFile(pdfBuffer: Buffer, apiKey: string, model: string):
         temperature: 0,
         maxOutputTokens: MAX_OUTPUT_TOKENS,
         responseMimeType: 'application/json',
+        thinkingConfig: thinkingConfigFor(model),
       },
     }),
-    signal: AbortSignal.timeout(50000),
+    signal: AbortSignal.timeout(timeoutMs),
   }, `${model} file`)
 
   console.log(`[gemini] ${model} file: ${Date.now() - t0}ms status=${res.status}`)
@@ -418,14 +469,20 @@ export async function extractFromPDFChunked(
   console.log(`[gemini] split into ${chunks.length} chunks of ${pagesPerChunk} pages in ${Date.now() - tSplit}ms`)
 
   if (chunks.length === 1) {
-    return extractFromPDF(chunks[0])
+    return extractFromPDF(chunks[0], false, true, deadline)
   }
 
   // ─── Pass 1: all chunks in parallel ────────────────────────────────────────
+  // The parallel pass gets the budget MINUS a reserve for the sequential
+  // retry pass. Previously it could run to the full deadline, leaving any
+  // failed chunk with zero time to be retried.
+  const parallelDeadline = deadline
+    ? Math.max(deadline - RETRY_RESERVE_MS, Date.now() + 10000)
+    : undefined
   const tPar = Date.now()
   const parallelResults = await allSettledByDeadline(
-    chunks.map((c, i) => staggered(() => extractFromPDF(c, /* skipRpmRetry */ true, /* allowExpensiveModel */ false), i)),
-    deadline
+    chunks.map((c, i) => staggered(() => extractFromPDF(c, /* skipRpmRetry */ true, /* allowExpensiveModel */ false, parallelDeadline), i)),
+    parallelDeadline
   )
   console.log(`[gemini] parallel pass: ${Date.now() - tPar}ms`)
 
@@ -454,13 +511,31 @@ export async function extractFromPDFChunked(
     console.log(`[gemini] retrying ${needsRetry.length} chunk(s) sequentially…`)
     const tRetry = Date.now()
     const stillFailed: string[] = []
+    // gemini-2.5-pro costs far more per token than the Flash models, and
+    // every chunk that reaches this retry pass is individually eligible for
+    // it. Without a cap, a document that's genuinely hard for the cheap
+    // models (many chunks failing at once — a bad scan, an unusual layout)
+    // could escalate dozens of chunks to Pro in one conversion, the exact
+    // failure mode that spiked the Gemini bill previously. Past this many
+    // expensive attempts, remaining retries stay on the cheap models — a
+    // lower-confidence result beats an unbounded bill.
+    const MAX_EXPENSIVE_RETRIES = 8
+    let expensiveRetriesUsed = 0
+    let cappedWarningLogged = false
     for (const i of needsRetry) {
       if (deadline && Date.now() > deadline) {
         console.warn(`[gemini] extraction deadline reached — stopping retries early, returning what succeeded so far`)
         break
       }
+      const allowExpensive = expensiveRetriesUsed < MAX_EXPENSIVE_RETRIES
+      if (allowExpensive) {
+        expensiveRetriesUsed++
+      } else if (!cappedWarningLogged) {
+        cappedWarningLogged = true
+        console.warn(`[gemini] hit MAX_EXPENSIVE_RETRIES (${MAX_EXPENSIVE_RETRIES}) for this document — remaining retries stay on cheap models`)
+      }
       try {
-        const result = await extractFromPDF(chunks[i], /* skipRpmRetry */ false, /* allowExpensiveModel */ true)
+        const result = await extractFromPDF(chunks[i], /* skipRpmRetry */ false, /* allowExpensiveModel */ allowExpensive, deadline)
         // Even an empty result on retry is "successful" — page may truly have nothing
         successes.push(result)
         if (result.transactions.length > 0) {
@@ -508,20 +583,34 @@ export async function extractFromPDFChunked(
 // models only) and only allows Pro for chunks that reach the sequential
 // retry pass — bounding Pro usage to genuinely-stuck chunks retried one at
 // a time, never a stampede of parallel requests.
-export async function extractFromPDF(pdfBuffer: Buffer, skipRpmRetry: boolean = false, allowExpensiveModel: boolean = true): Promise<ExtractionResult> {
+// deadline (optional, Date.now()-style): hard ceiling for this extraction.
+// Every fetch is clamped to the time remaining, and the cascade stops trying
+// further models once the budget is essentially gone. Previously the
+// single-call path had NO deadline at all: three models × 50s timeouts ×
+// retry backoffs could run past 100s against the route's 55s race, so a
+// slow small PDF was guaranteed to "fail" even when extraction would have
+// succeeded — and the abandoned calls kept billing in the background.
+export async function extractFromPDF(pdfBuffer: Buffer, skipRpmRetry: boolean = false, allowExpensiveModel: boolean = true, deadline?: number): Promise<ExtractionResult> {
   const apiKey = process.env.GEMINI_API_KEY
   if (!apiKey) throw new Error('GEMINI_API_KEY not set. Get a free key at https://aistudio.google.com/app/apikey')
 
   const useInline = pdfBuffer.length <= INLINE_THRESHOLD
-  const call = (model: string) => useInline
-    ? callGeminiInline(pdfBuffer, apiKey, model)
-    : callGeminiFile(pdfBuffer, apiKey, model)
+  const baseTimeout = skipRpmRetry ? CHUNK_CALL_TIMEOUT_MS : SINGLE_CALL_TIMEOUT_MS
+  const call = (model: string, timeoutMs: number) => useInline
+    ? callGeminiInline(pdfBuffer, apiKey, model, timeoutMs)
+    : callGeminiFile(pdfBuffer, apiKey, model, timeoutMs)
 
   const models = allowExpensiveModel ? [MODEL_FAST, MODEL_ACCURATE, MODEL_LEGACY] : [MODEL_FAST, MODEL_ACCURATE]
 
   for (let i = 0; i < models.length; i++) {
     const model = models[i]
     const isLast = i === models.length - 1
+
+    const remaining = deadline ? deadline - Date.now() : Infinity
+    if (remaining < 3000) {
+      throw new Error('AI extraction ran out of time. Please try again — repeat attempts are usually faster.')
+    }
+    const timeoutMs = Math.min(baseTimeout, remaining)
 
     // Skip a model that a sibling chunk (or an earlier request on this warm
     // instance) already found overloaded seconds ago — unless it's the last
@@ -532,10 +621,12 @@ export async function extractFromPDF(pdfBuffer: Buffer, skipRpmRetry: boolean = 
     }
 
     try {
-      // For single-PDF calls: retry RPM with a short backoff (1 retry).
+      // For single-PDF calls: retry RPM with a short backoff (1 retry) —
+      // but only if there's enough budget left that a backoff + second
+      // attempt can actually complete.
       // For chunked calls: no retry — cascade to next model immediately.
-      const retries = skipRpmRetry ? 0 : 1
-      const result = await withRetry(() => call(model), retries, /* delayMs= */ 3000)
+      const retries = skipRpmRetry || remaining < 15000 ? 0 : 1
+      const result = await withRetry(() => call(model, timeoutMs), retries, /* delayMs= */ 3000)
 
       if (result.transactions.length > 0) {
         // Try to fix missing bank name via IFSC
@@ -608,16 +699,36 @@ function parseResponse(data: any, model: string): ExtractionResult {
   const text  = candidate?.content?.parts?.[0]?.text?.trim() ?? ''
   const clean = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
 
+  // Rows arrive as positional arrays (see PROMPT) but the model occasionally
+  // falls back to keyed objects — accept both.
+  const toTx = (row: any): Transaction | null => {
+    if (Array.isArray(row)) {
+      if (!row[0]) return null
+      return {
+        date: String(row[0]),
+        description: String(row[1] ?? ''),
+        debit: typeof row[2] === 'number' ? row[2] : null,
+        credit: typeof row[3] === 'number' ? row[3] : null,
+        balance: typeof row[4] === 'number' ? row[4] : null,
+        ref_no: row[5] != null ? String(row[5]) : null,
+      }
+    }
+    if (row && typeof row === 'object' && row.date) return row as Transaction
+    return null
+  }
+  const toTxList = (rows: any): Transaction[] =>
+    Array.isArray(rows) ? rows.map(toTx).filter((t): t is Transaction => t !== null) : []
+
   const tryParse = (s: string): ExtractionResult | null => {
     try {
       const parsed = JSON.parse(s)
       if (Array.isArray(parsed)) {
-        return { meta: { ...EMPTY_META }, transactions: parsed }
+        return { meta: { ...EMPTY_META }, transactions: toTxList(parsed) }
       }
       if (parsed && typeof parsed === 'object') {
         return {
           meta: { ...EMPTY_META, ...(parsed.meta ?? {}) },
-          transactions: Array.isArray(parsed.transactions) ? parsed.transactions : [],
+          transactions: toTxList(parsed.transactions),
         }
       }
     } catch {}
@@ -640,8 +751,10 @@ function parseResponse(data: any, model: string): ExtractionResult {
     try {
       // Close any incomplete JSON array
       const partial = partialMatch[1]
-        .replace(/,\s*$/, '')   // remove trailing comma
-        .replace(/\{[^}]*$/, '') // remove incomplete last object
+        .replace(/,\s*$/, '')     // remove trailing comma
+        .replace(/\{[^}]*$/, '')  // remove incomplete last object row
+        .replace(/\[[^\][]*$/, '') // remove incomplete last array row
+        .replace(/,\s*$/, '')     // trailing comma left by the row removal
         + ']'
       const r = tryParse(`{"meta":{},"transactions":${partial}}`)
       if (r && r.transactions.length > 0) {
