@@ -79,10 +79,11 @@ const MAX_OUTPUT_TOKENS = 65536            // max for all Flash models
 // fixed JSON schema, temperature 0, "copy the rows you see" — thinking adds
 // no accuracy, but it was silently multiplying both the bill and the
 // latency (slow calls → timeouts → cascade to pricier models → more
-// thinking). flash and flash-lite accept thinkingBudget: 0 (fully off);
-// pro cannot be disabled below its minimum of 128.
-function thinkingConfigFor(model: string): { thinkingBudget: number } {
-  return { thinkingBudget: model === MODEL_LEGACY ? 128 : 0 }
+// thinking). Only Pro supports thinkingConfig — flash-lite rejects it
+// entirely ("Unknown name thinkingConfig: Cannot find field").
+function thinkingConfigFor(model: string): { thinkingConfig?: { thinkingBudget: number } } {
+  if (model === MODEL_LEGACY) return { thinkingConfig: { thinkingBudget: 128 } }
+  return {}
 }
 
 // Per-request fetch timeouts. These are UPPER bounds — every call is also
@@ -318,7 +319,7 @@ async function callGeminiInline(pdfBuffer: Buffer, apiKey: string, model: string
         maxOutputTokens: MAX_OUTPUT_TOKENS,
         responseMimeType: 'application/json',
       },
-      thinkingConfig: thinkingConfigFor(model),
+      ...thinkingConfigFor(model),
     }),
     signal: AbortSignal.timeout(timeoutMs),
   }, `${model} inline`)
@@ -394,7 +395,7 @@ async function callGeminiFile(pdfBuffer: Buffer, apiKey: string, model: string, 
         maxOutputTokens: MAX_OUTPUT_TOKENS,
         responseMimeType: 'application/json',
       },
-      thinkingConfig: thinkingConfigFor(model),
+      ...thinkingConfigFor(model),
     }),
     signal: AbortSignal.timeout(timeoutMs),
   }, `${model} file`)
