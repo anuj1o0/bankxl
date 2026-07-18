@@ -10,6 +10,9 @@ const nextConfig = {
     // find module '...vendor-chunks/pdf.worker.mjs'"). Loading it from
     // node_modules keeps the worker file next to the library.
     serverComponentsExternalPackages: ['sharp', 'pdf-parse', 'exceljs', 'pdfjs-dist', 'canvas', 'tesseract.js'],
+    outputFileTracingIncludes: {
+      '/api/convert/local': ['./node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs'],
+    },
   },
   // NOTE: do NOT add a www<->apex redirect here without first checking
   // Vercel's dashboard (Project → Settings → Domains). An app-level redirect
