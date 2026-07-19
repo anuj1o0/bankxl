@@ -14,6 +14,7 @@ import { resolveSiteUrl } from '@/lib/site-url'
 // from stable ones instead of burying that signal.
 const SITE_STABLE_DATE = '2026-07-08'   // last broad content/cross-link pass before this batch
 const US_EXPANSION_DATE = '2026-07-13'  // US banks + us-accountants persona added
+const BLOG_EXPANSION_DATE = '2026-07-19' // new blog posts: privacy, SBI, loan, automation
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = resolveSiteUrl()
@@ -22,7 +23,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: '',             priority: 1.0, changeFrequency: 'weekly'  as const, lastModified: US_EXPANSION_DATE },
     { path: '/pricing',     priority: 0.9, changeFrequency: 'monthly' as const, lastModified: US_EXPANSION_DATE },
     { path: '/banks',       priority: 0.85, changeFrequency: 'monthly' as const, lastModified: US_EXPANSION_DATE },
-    { path: '/blog',        priority: 0.85, changeFrequency: 'weekly'  as const, lastModified: SITE_STABLE_DATE },
+    { path: '/blog',        priority: 0.85, changeFrequency: 'weekly'  as const, lastModified: BLOG_EXPANSION_DATE },
     { path: '/sample',      priority: 0.7, changeFrequency: 'monthly' as const, lastModified: SITE_STABLE_DATE },
     { path: '/api-docs',    priority: 0.7, changeFrequency: 'monthly' as const, lastModified: SITE_STABLE_DATE },
     { path: '/about',       priority: 0.6, changeFrequency: 'yearly'  as const, lastModified: SITE_STABLE_DATE },
@@ -58,11 +59,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
   }))
 
   // Blog posts
+  const NEW_BLOG_SLUGS = new Set([
+    'bank-statement-privacy-security', 'sbi-bank-statement-to-excel',
+    'bank-statement-for-loan-application', 'automate-bank-reconciliation-for-ca-firms',
+  ])
   const blogPages = ALL_BLOG_SLUGS.map(slug => ({
     path: `/blog/${slug}`,
     priority: 0.75,
     changeFrequency: 'monthly' as const,
-    lastModified: SITE_STABLE_DATE,
+    lastModified: NEW_BLOG_SLUGS.has(slug) ? BLOG_EXPANSION_DATE : SITE_STABLE_DATE,
   }))
 
   // Individual bank landing pages — high SEO value, low competition

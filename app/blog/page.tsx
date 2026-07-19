@@ -5,8 +5,13 @@ import Footer from '@/components/Footer'
 import { BLOG_POSTS, ALL_BLOG_SLUGS } from './[slug]/data'
 
 export const metadata: Metadata = {
-  title: 'BankXL Blog — Guides for Accountants, CAs and Finance Teams',
-  description: 'Practical guides on bank statement conversion, Tally imports, bank reconciliation, and accounting automation for Indian CAs, bookkeepers and firms.',
+  title: 'BankXL Blog — Bank Statement Conversion Guides for CAs & Finance Teams',
+  description: 'Practical guides on bank statement PDF to Excel conversion, Tally import, SBI/HDFC statement handling, data privacy, and accounting automation for Indian chartered accountants.',
+  keywords: [
+    'bank statement conversion guide', 'bank statement to excel tutorial',
+    'tally bank statement import', 'sbi statement converter guide',
+    'bank statement privacy', 'ca firm automation', 'bank reconciliation tips',
+  ],
   alternates: { canonical: '/blog' },
 }
 
