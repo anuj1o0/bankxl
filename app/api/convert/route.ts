@@ -126,7 +126,7 @@ export async function POST(req: NextRequest) {
     extracted = await Promise.race([
       extractor,
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('AI extraction timed out. Try a smaller PDF or split it into months.')), 55000)
+        setTimeout(() => reject(new Error('Extraction timed out. Try a smaller PDF or split it into months.')), 55000)
       ),
     ])
     console.log(`[convert] extraction: ${Date.now() - tExtract}ms (${extracted.transactions.length} tx, ${pageCount} pages${extracted.warning ? ', PARTIAL' : ''})`)

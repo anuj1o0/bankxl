@@ -20,7 +20,7 @@ const TESTIMONIALS = [
 const FAQ = [
   { q: 'Which banks does BankXL support?', a: 'All Indian banks — SBI, HDFC, ICICI, Axis, Kotak, PNB, Canara, BoB, IDFC, IndusInd, Federal, Yes, RBL, IDBI, Union, AU SFB and 90+ more. International banks (Chase, Bank of America, Wells Fargo, HSBC, Citi, DBS, Standard Chartered, etc.) are also supported.' },
   { q: 'How accurate is the conversion?', a: 'For digitally-generated PDFs, accuracy is typically 99.5%+. For scanned/image PDFs, 95%+ depending on quality. Always review the Excel before final use — that\'s standard practice for any conversion tool.' },
-  { q: 'Is my data safe?', a: 'Yes. Files are processed in memory and never stored on our servers. Nothing is written to disk. We don\'t train AI models on your data, and we don\'t share data with third parties.' },
+  { q: 'Is my data safe?', a: 'Yes. Files are processed in memory and never stored on our servers. Nothing is written to disk, and we don\'t share data with third parties.' },
   { q: 'Can I cancel anytime?', a: 'Yes. Cancel from your dashboard with one click. You keep access until the end of your billing period. No questions asked.' },
   { q: 'Do you offer a free trial?', a: 'Yes. The free plan gives you 50 pages every month, no credit card needed. If you need a one-off, grab a ₹49 day pass for 100 pages in 24 hours.' },
   { q: 'Does it work on password-protected PDFs?', a: 'Remove the password first using any free PDF unlocker (or Adobe Acrobat). Once unlocked, BankXL handles the rest.' },
@@ -55,7 +55,7 @@ const howToLD = {
   totalTime: 'PT1M',
   step: [
     { '@type': 'HowToStep', position: 1, name: 'Upload PDF', text: 'Drop your bank statement PDF — even password-protected ones (after unlock).' },
-    { '@type': 'HowToStep', position: 2, name: 'AI extracts data', text: 'BankXL AI reads every transaction, amount, date and balance in seconds.' },
+    { '@type': 'HowToStep', position: 2, name: 'Data extracted instantly', text: 'BankXL reads every transaction, amount, date and balance in seconds.' },
     { '@type': 'HowToStep', position: 3, name: 'Download Excel', text: 'Download clean Excel, CSV, JSON or Tally XML — formatted and ready to use.' },
   ],
 }
@@ -110,8 +110,8 @@ const FEATURES_BENTO = [
     desc: 'SBI, HDFC, ICICI, Axis, Kotak, PNB, Canara, BoB, IDFC, IndusInd and 90+ more Indian banks. Plus Chase, Bank of America, Wells Fargo, HSBC and 400+ international banks.',
   },
   {
-    icon: I.scan, title: 'AI reads scanned PDFs', big: true,
-    desc: 'Image-based statements from old passbooks? No problem. Our AI reads scans at near-perfect accuracy — no manual cleanup needed.',
+    icon: I.scan, title: 'Reads scanned PDFs', big: true,
+    desc: 'Image-based statements from old passbooks? No problem. Built-in OCR reads scans at near-perfect accuracy — no manual cleanup needed.',
   },
   { icon: I.grid, title: '4 output formats', desc: 'Excel, CSV, JSON & Tally Prime XML. Drop straight into Tally, Zoho or QuickBooks.' },
   { icon: I.lock, title: 'Zero data retention', desc: 'Processed in memory, never written to disk. Deleted instantly after conversion.' },
@@ -123,7 +123,7 @@ const FEATURES_BENTO = [
 
 const STEPS = [
   { n: '01', icon: I.upload, label: 'Upload your PDF', sub: 'Drop any bank statement — digital, printed or scanned. Up to 25 MB.' },
-  { n: '02', icon: I.sparkles, label: 'AI extracts every row', sub: 'Detects bank, account, period & every transaction — in seconds, with running balance intact.' },
+  { n: '02', icon: I.sparkles, label: 'Instantly extracts every row', sub: 'Detects bank, account, period & every transaction — in seconds, with running balance intact.' },
   { n: '03', icon: I.download, label: 'Download clean output', sub: 'Excel, CSV, JSON or Tally XML. Color-coded, filtered, ready to import.' },
 ]
 
@@ -158,8 +158,8 @@ export default function LandingPage() {
               <span style={{ whiteSpace: 'nowrap' }}> 15 seconds.</span>
             </h1>
             <p className="anim-fadeup" style={{ fontSize: 17, color: 'var(--text-dim)', lineHeight: 1.65, marginBottom: 32, maxWidth: 530, animationDelay: '120ms' }}>
-              Drop any bank statement — printed, scanned or digital. Our AI reads every
-              transaction with surgical precision and hands you a clean Excel, CSV, JSON
+              Drop any bank statement — printed, scanned or digital. Every transaction
+              extracted with surgical precision into a clean Excel, CSV, JSON
               or Tally file. 500+ banks worldwide.
             </p>
             <div className="anim-fadeup" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 34, animationDelay: '180ms' }}>

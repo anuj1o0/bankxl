@@ -110,7 +110,7 @@ export default function BankPage({ params }: Props) {
           </h1>
 
           <p style={{ fontSize: 17, color: 'var(--text-dim)', lineHeight: 1.7, marginBottom: 28, maxWidth: 640 }}>
-            Stop manually typing {data.shortName} transactions. Upload your {data.name} statement PDF and get a clean, formatted Excel file instantly — with all transactions, dates, and balances extracted by AI.
+            Stop manually typing {data.shortName} transactions. Upload your {data.name} statement PDF and get a clean, formatted Excel file instantly — with all transactions, dates, and balances extracted automatically.
           </p>
 
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>

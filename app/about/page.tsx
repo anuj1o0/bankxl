@@ -18,13 +18,13 @@ export default function About() {
         </h1>
         <div style={{ fontSize: 15, color: 'var(--text-dim)', lineHeight: 1.8 }}>
           <p style={{ marginBottom: 18 }}>
-            Most bank statement converters were built five years ago, when AI couldn't read scanned PDFs. They charge ₹1,000+ per month, choke on Indian formats like SBI's quirky layouts and HDFC's multi-column rows, and store your files for "30 days" by default.
+            Most bank statement converters were built five years ago and haven't kept up with modern formats. They charge ₹1,000+ per month, choke on Indian formats like SBI's quirky layouts and HDFC's multi-column rows, and store your files for "30 days" by default.
           </p>
           <p style={{ marginBottom: 18 }}>
             We thought: <em>this should be a 15-second job and cost less than a chai a day.</em>
           </p>
           <p style={{ marginBottom: 18 }}>
-            So we built BankXL on top of Google's Gemini AI — which can read scanned PDFs at 99%+ accuracy — and made it stupidly simple: drop a PDF, get an Excel. No setup. No training. No "schedule a demo".
+            So we built BankXL with a purpose-built parsing engine — deterministic, fast, and accurate — and made it stupidly simple: drop a PDF, get an Excel. No setup. No waiting. No "schedule a demo".
           </p>
           <p style={{ marginBottom: 18 }}>
             And because India's CA market needs price-fit — not enterprise pricing — we kept it at <strong>₹299/mo for unlimited</strong>. With a <strong>₹49 day pass</strong> for one-off jobs and a <strong>free tier</strong> that's actually useful (3 conversions/month, no card needed).

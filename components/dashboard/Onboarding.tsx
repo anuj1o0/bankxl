@@ -27,7 +27,7 @@ export default function Onboarding({ name, isFirstUse }: { name?: string; isFirs
   const steps = [
     { num: 1, title: 'Drop your first PDF', desc: 'Any bank statement — SBI, HDFC, ICICI, Axis, Kotak, or 100+ others.' },
     { num: 2, title: 'Pick output format', desc: 'Excel is recommended. Pro users also get CSV, JSON, and Tally XML.' },
-    { num: 3, title: 'Click convert', desc: 'AI reads every transaction in 15–25 seconds. Navigate freely while it runs.' },
+    { num: 3, title: 'Click convert', desc: 'Every transaction extracted in seconds. Navigate freely while it runs.' },
   ]
 
   return (

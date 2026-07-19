@@ -82,7 +82,7 @@ export default function BanksPage() {
           Every bank. Every format.
         </h1>
         <p style={{ fontSize: 16, color: 'var(--text-dim)', marginBottom: 48, maxWidth: 640, lineHeight: 1.6 }}>
-          BankXL works with 500+ Indian and international banks. Banks marked with a <span style={{ color: 'var(--accent)' }}>guide →</span> have a dedicated conversion guide. If your bank isn't listed, try it anyway — our AI handles most formats automatically.
+          BankXL works with 500+ Indian and international banks. Banks marked with a <span style={{ color: 'var(--accent)' }}>guide →</span> have a dedicated conversion guide. If your bank isn't listed, try it anyway — our engine handles most formats automatically.
         </p>
 
         <Section title="US Banks" banks={US_BANKS} />

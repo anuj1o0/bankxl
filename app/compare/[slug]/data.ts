@@ -81,7 +81,7 @@ export const COMPARE_PAGES: Record<string, ComparePageData> = {
     ],
     faqs: [
       { q: 'What is the actual accuracy difference?',
-        a: 'For Indian bank statements specifically, BankXL matches or beats Nanonets on accuracy because our AI is pre-tuned on those bank layouts — you don\'t need to train it. For niche or foreign document layouts you\'d hand-configure Nanonets to a similar level, but that costs setup time.' },
+        a: 'For Indian bank statements specifically, BankXL matches or beats Nanonets on accuracy because our engine is pre-tuned on those bank layouts — you don\'t need to train it. For niche or foreign document layouts you\'d hand-configure Nanonets to a similar level, but that costs setup time.' },
       { q: 'Can BankXL replace Nanonets entirely?',
         a: 'For bank-statement work, yes. For a broader OCR pipeline that also handles invoices, POs, receipts, contracts, and delivery notes — no. Nanonets is a general parser; BankXL is bank-statement-specialist. Some CA firms use BankXL for banks and keep a lighter tool (or manual review) for other docs.' },
       { q: 'Does BankXL have an API?',
@@ -91,7 +91,7 @@ export const COMPARE_PAGES: Record<string, ComparePageData> = {
       { q: 'What about pricing at higher volumes?',
         a: 'Nanonets becomes cheaper than BankXL at extreme scale (~10,000+ pages/day with a negotiated enterprise contract). At everyday CA-firm volumes (up to a few thousand pages/month), BankXL is dramatically cheaper.' },
       { q: 'Is BankXL data private?',
-        a: 'Yes. Files are processed in memory and deleted immediately after conversion. Nothing is stored on disk long-term. We don\'t train AI on customer data. Nanonets similarly has strong security posture (SOC 2, HIPAA, GDPR) — the practical difference is BankXL\'s zero-retention policy versus Nanonets\' longer-lived model-training data policy.' },
+        a: 'Yes. Files are processed in memory and deleted immediately after conversion. Nothing is stored on disk long-term. We don\'t store customer data. Nanonets similarly has strong security posture (SOC 2, HIPAA, GDPR) — the practical difference is BankXL\'s zero-retention policy versus Nanonets\' longer-lived model-training data policy.' },
       { q: 'Can I try BankXL free?',
         a: 'Yes. 50 free pages every month with no credit card, no time limit. Convert a real client statement, see the output, decide.' },
     ],

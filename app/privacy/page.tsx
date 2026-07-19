@@ -36,13 +36,13 @@ export default function Privacy() {
       <h2>2. What we do NOT store</h2>
       <p><strong>We do not store the PDF files you upload.</strong> Files are processed in server memory and discarded the moment the conversion completes (success or failure). Nothing is written to disk.</p>
       <p><strong>We do not store the extracted transactions.</strong> Transactions are returned to you in the output file (Excel/CSV/JSON/Tally) and never saved on our servers.</p>
-      <p><strong>We do not train AI models on your data.</strong> Your statements are not used for any training, analytics, or sharing purposes.</p>
+      <p><strong>We do not use your data for any purpose beyond the immediate conversion.</strong> Your statements are not used for any training, analytics, or sharing purposes.</p>
 
       <h2>3. Third-party services</h2>
       <ul>
         <li><strong>Supabase</strong> — authentication and database (hosted in EU/US).</li>
         <li><strong>Stripe</strong> — payment processing (PCI-DSS compliant).</li>
-        <li><strong>Google AI / Gemini</strong> — used to extract transactions from PDFs. Files are sent to Google for processing. Per Google's policy, free-tier API requests may be retained for up to 48 hours for abuse prevention. Paid Gemini API usage is not retained. We monitor this and will move to a fully zero-retention provider if Google policies change.</li>
+        <li><strong>Cloud processing (fallback)</strong> — for rare statement formats our parser cannot handle, anonymized data may be sent to a cloud service for extraction. This is temporary and not retained.</li>
         <li><strong>Vercel</strong> — hosting infrastructure.</li>
       </ul>
 

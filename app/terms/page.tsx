@@ -40,7 +40,7 @@ export default function Terms() {
       <p>We aim for 99.5% uptime but do not guarantee uninterrupted service. Scheduled maintenance is announced via email. We are not liable for losses arising from downtime.</p>
 
       <h2>7. Accuracy</h2>
-      <p>BankXL uses AI to extract data. While we strive for high accuracy (typically 99%+), we do not guarantee 100% accuracy. <strong>You are responsible for reviewing the converted output before using it for accounting, tax, or legal purposes.</strong></p>
+      <p>BankXL uses automated parsing to extract data. While we strive for high accuracy (typically 99%+), we do not guarantee 100% accuracy. <strong>You are responsible for reviewing the converted output before using it for accounting, tax, or legal purposes.</strong></p>
 
       <h2>8. Intellectual property</h2>
       <p>You retain full ownership of your statements and converted output. We retain ownership of the BankXL platform, code, and brand.</p>

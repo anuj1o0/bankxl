@@ -91,7 +91,7 @@ export const BANK_PAGES: Record<string, BankPageData> = {
       { q: 'Does BankXL support Axis Bank password-protected statements?', a: 'Yes — after removing the password. Axis Bank often uses your date of birth or account number as the password. Use any free PDF tool to unlock first.' },
       { q: 'Can I convert Axis Bank statements for Tally?', a: 'Yes. BankXL exports Axis Bank transactions as Tally XML for direct import into Tally Prime or ERP 9.' },
       { q: 'Does BankXL work with Axis Bank current account statements?', a: 'Absolutely. Both savings and current account statements from Axis Bank are fully supported.' },
-      { q: 'What if my Axis statement has handwritten entries?', a: 'BankXL\'s AI uses OCR to read scanned and handwritten entries, though accuracy may vary. For best results, use digital e-statements from internet banking.' },
+      { q: 'What if my Axis statement has handwritten entries?', a: 'BankXL uses OCR to read scanned and handwritten entries, though accuracy may vary. For best results, use digital e-statements from internet banking.' },
     ],
   },
 

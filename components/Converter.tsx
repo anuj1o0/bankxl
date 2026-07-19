@@ -231,7 +231,7 @@ export default function Converter({ user, freeMode, initialFormat = 'excel', sho
           {[
             { label: 'Uploading PDF', sub: 'Sending to secure server...' },
             { label: 'Reading pages', sub: 'Detecting bank format...' },
-            { label: 'AI extracting transactions', sub: 'Reading every row carefully...' },
+            { label: 'Extracting transactions', sub: 'Reading every row carefully...' },
             { label: 'Building output file', sub: 'Formatting & finalizing...' },
           ].map((s, i) => {
             const done = i < activeStep

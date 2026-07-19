@@ -77,7 +77,7 @@ export const CONVERT_PAGES: Record<string, ConvertPageData> = {
     benefits: ['50 free pages / month', 'No credit card needed', 'Excel opens in seconds'],
     steps: [
       { label: 'Upload your PDF',           sub: 'Drop your bank statement — up to 25 MB, any bank.' },
-      { label: 'AI extracts every row',    sub: 'Bank, account, period and every single transaction — parsed automatically.' },
+      { label: 'Extracts every row instantly',    sub: 'Bank, account, period and every single transaction — parsed automatically.' },
       { label: 'Download formatted .xlsx', sub: 'Three sheets: Transactions, Summary, By Type. Auto-filter enabled, headers frozen.' },
     ],
     features: [
@@ -88,7 +88,7 @@ export const CONVERT_PAGES: Record<string, ConvertPageData> = {
       { title: 'Summary sheet included',
         desc: 'Total debits, total credits, net flow, transaction count, date range and detected bank — auto-generated alongside your data.' },
       { title: 'Works on scanned PDFs',
-        desc: 'Image-based statements from old passbooks? AI reads them too, near-perfectly.' },
+        desc: 'Image-based statements from old passbooks? Built-in OCR reads them too, near-perfectly.' },
       { title: 'Password PDFs supported',
         desc: 'Remove the password once with any PDF viewer, then upload. BankXL handles everything after that.' },
       { title: 'Bulk conversion',
@@ -110,7 +110,7 @@ export const CONVERT_PAGES: Record<string, ConvertPageData> = {
       { q: 'How accurate is the extraction?',
         a: 'For digitally-generated PDFs, accuracy is typically 99.5%+. For scanned or image-based statements, 95%+ depending on quality. Always review before final use — good practice for any conversion tool.' },
       { q: 'Is my bank statement safe?',
-        a: 'Yes. Files are processed in memory and deleted immediately after conversion. Nothing is written to disk long-term. We do not train AI on your data or share it with third parties.' },
+        a: 'Yes. Files are processed in memory and deleted immediately after conversion. Nothing is written to disk long-term. Your data is never stored or shared with third parties.' },
       { q: 'Can I convert password-protected bank statement PDFs?',
         a: 'You need to remove the password first — open the PDF in Adobe Reader or any PDF viewer, use File → Print → Save as PDF, then upload the unlocked file. BankXL handles the rest.' },
       { q: 'Do I need to install anything?',
@@ -144,7 +144,7 @@ export const CONVERT_PAGES: Record<string, ConvertPageData> = {
     benefits: ['50 free pages / month', 'Works with any CSV importer', 'UTF-8, no encoding issues'],
     steps: [
       { label: 'Upload your PDF',            sub: 'Any bank statement — SBI, HDFC, ICICI, Axis, Kotak, and 500+ more.' },
-      { label: 'AI extracts every row',      sub: 'One transaction per row: date, description, debit, credit, balance, reference.' },
+      { label: 'Extracts every row instantly',      sub: 'One transaction per row: date, description, debit, credit, balance, reference.' },
       { label: 'Download standard CSV',      sub: 'RFC 4180 compliant, UTF-8 encoded, ready to import anywhere.' },
     ],
     features: [
@@ -154,7 +154,7 @@ export const CONVERT_PAGES: Record<string, ConvertPageData> = {
         desc: 'RFC 4180 quoting, UTF-8 with BOM (Excel-friendly), consistent column order, ISO date format. Handles descriptions with commas, quotes and newlines without breaking anything.' },
       { title: 'Every transaction captured', desc: 'Multi-page statements, credit and debit sides, reference numbers — nothing dropped.' },
       { title: 'Numbers ready to sum',      desc: 'Amounts as plain numbers (no commas, no currency symbols) — SUM/VLOOKUP just works.' },
-      { title: 'Works on scanned PDFs',     desc: 'AI reads scanned/image-based statements too, not just digital ones.' },
+      { title: 'Works on scanned PDFs',     desc: 'Reads scanned/image-based statements too, not just digital ones.' },
       { title: 'Bulk export',                desc: 'Convert dozens of statements at once. Perfect for month-end reconciliation.' },
     ],
     personas: [
@@ -177,7 +177,7 @@ export const CONVERT_PAGES: Record<string, ConvertPageData> = {
       { q: 'How does the CSV handle descriptions with commas?',
         a: 'Correctly. All string fields are quoted per RFC 4180, so descriptions like "UPI-ZOMATO, MUM" import cleanly without splitting into extra columns.' },
       { q: 'Is my bank statement safe?',
-        a: 'Yes. Files are processed in memory and deleted immediately after conversion. Nothing is stored long-term, and your data is never used to train AI.' },
+        a: 'Yes. Files are processed in memory and deleted immediately after conversion. Nothing is stored long-term, and your data is never stored or shared.' },
     ],
     proOnly: true,
   },
@@ -276,7 +276,7 @@ export const CONVERT_PAGES: Record<string, ConvertPageData> = {
     benefits: ['Typed schema', 'ISO dates, numeric amounts', 'Ready for pandas / SQL / APIs'],
     steps: [
       { label: 'Upload the PDF',            sub: 'From your app, dashboard, or a manual test — same endpoint.' },
-      { label: 'AI extracts everything',    sub: 'Statement meta + every transaction, normalised.' },
+      { label: 'Extracts everything instantly',    sub: 'Statement meta + every transaction, normalised.' },
       { label: 'Download or POST',          sub: 'Get a JSON file, or (Firm plan) use our REST API to skip the browser entirely.' },
     ],
     features: [

@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
   // Partial-extraction warning: mirror of the legacy chunked path's message.
   const missingPages = Math.max(0, Math.min(body.missingPages ?? 0, pageCount))
   if (missingPages > 0) {
-    merged.warning = `AI service congestion meant roughly ${missingPages} page(s) out of ${pageCount} could not be confirmed in time. The transactions below are real, but this statement may be incomplete — re-upload to retry if the numbers look short.`
+    merged.warning = `Service congestion meant roughly ${missingPages} page(s) out of ${pageCount} could not be confirmed in time. The transactions below are real, but this statement may be incomplete — re-upload to retry if the numbers look short.`
   }
 
   if (!merged.meta.bank_name) {

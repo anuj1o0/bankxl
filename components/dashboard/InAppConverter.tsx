@@ -21,7 +21,7 @@ const FORMATS = [
 // Ordered pipeline stages shown in the progress tracker
 const STAGES = [
   { key: 'uploading', label: 'Upload', sub: 'Sending PDF to secure server' },
-  { key: 'extracting', label: 'Extract', sub: 'AI is reading every transaction' },
+  { key: 'extracting', label: 'Extract', sub: 'Reading every transaction' },
   { key: 'building', label: 'Build', sub: 'Formatting & finalizing your file' },
 ] as const
 

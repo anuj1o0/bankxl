@@ -563,7 +563,7 @@ export async function extractFromPDFChunked(
       const missingPages = missingChunks * pagesPerChunk
       console.warn(`[gemini] ${missingChunks}/${chunks.length} chunks (~${missingPages} pages) missing from final result.`)
       const merged = mergeAndClean(successes)
-      merged.warning = `AI service congestion meant roughly ${missingPages} page(s) out of ${chunks.length * pagesPerChunk} could not be confirmed in time. The transactions below are real, but this statement may be incomplete — re-upload to retry if the numbers look short.`
+      merged.warning = `Service congestion meant roughly ${missingPages} page(s) out of ${chunks.length * pagesPerChunk} could not be confirmed in time. The transactions below are real, but this statement may be incomplete — re-upload to retry if the numbers look short.`
       return merged
     }
   }
@@ -609,7 +609,7 @@ export async function extractFromPDF(pdfBuffer: Buffer, skipRpmRetry: boolean = 
 
     const remaining = deadline ? deadline - Date.now() : Infinity
     if (remaining < 3000) {
-      throw new Error('AI extraction ran out of time. Please try again — repeat attempts are usually faster.')
+      throw new Error('Extraction ran out of time. Please try again — repeat attempts are usually faster.')
     }
     const timeoutMs = Math.min(baseTimeout, remaining)
 
@@ -650,8 +650,8 @@ export async function extractFromPDF(pdfBuffer: Buffer, skipRpmRetry: boolean = 
           // All models exhausted
           throw new Error(
             isDaily
-              ? 'Daily AI limit reached. Please try again after midnight, or contact support if urgent.'
-              : 'AI service is temporarily at capacity. Please wait 1–2 minutes and try again.'
+              ? 'Daily processing limit reached. Please try again after midnight, or contact support if urgent.'
+              : 'Service is temporarily at capacity. Please wait 1–2 minutes and try again.'
           )
         }
         console.warn(`[gemini] ${model} ${isDaily ? 'daily limit' : 'rate limit'} — switching to ${models[i + 1]}`)

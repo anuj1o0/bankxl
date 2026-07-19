@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     'bank statement data extraction',
     'convert bank statement automatically',
     'bank statement to excel free',
-    'ai bank statement converter',
+    'bank statement converter',
     'bank statement ocr',
     'chartered accountant software india',
     'bank statement automation tool',
@@ -43,7 +43,7 @@ export const metadata: Metadata = {
   alternates: { canonical: '/' },
   openGraph: {
     title: 'BankXL — Bank Statement PDF to Excel in 15 Seconds',
-    description: 'AI-powered bank statement converter trusted by 1,200+ Indian CAs. Supports SBI, HDFC, ICICI, Axis, Kotak & 500+ banks. Excel, CSV, JSON, Tally XML. Free to try.',
+    description: 'Bank statement PDF to Excel converter trusted by 1,200+ Indian CAs. Supports SBI, HDFC, ICICI, Axis, Kotak & 500+ banks. Excel, CSV, JSON, Tally XML. Free to try.',
     url: APP_URL,
     siteName: 'BankXL',
     locale: 'en_IN',
@@ -53,7 +53,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'BankXL — Bank Statement PDF to Excel in 15 Seconds',
-    description: 'AI-powered converter for Indian CAs. SBI, HDFC, ICICI, Axis, Kotak & 500+ banks. Free to try.',
+    description: 'Bank statement converter for Indian CAs. SBI, HDFC, ICICI, Axis, Kotak & 500+ banks. Free to try.',
     images: [OG_IMAGE],
   },
   robots: {
@@ -108,7 +108,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     // HTML <link rel="icon">, which is why this used favicon.svg before and
     // likely wasn't rendering in Search's Knowledge Panel / rich results.
     logo: `${APP_URL}/icon-512.png`,
-    description: 'AI-powered bank statement PDF to Excel converter for Indian CAs and accountants.',
+    description: 'Bank statement PDF to Excel converter for Indian CAs and accountants.',
     contactPoint: {
       '@type': 'ContactPoint',
       email: 'support@banlxlai.com',
@@ -144,7 +144,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       'Convert bank statement PDF to CSV',
       'Tally XML export for direct import',
       'Works with SBI, HDFC, ICICI, Axis, Kotak and 500+ banks',
-      'AI-powered OCR for scanned PDFs',
+      'OCR for scanned PDFs',
       'Team collaboration for CA firms',
       'Bulk conversion of multiple statements',
     ],
