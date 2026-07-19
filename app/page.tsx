@@ -20,7 +20,7 @@ const TESTIMONIALS = [
 const FAQ = [
   { q: 'Which banks does BankXL support?', a: 'All Indian banks — SBI, HDFC, ICICI, Axis, Kotak, PNB, Canara, BoB, IDFC, IndusInd, Federal, Yes, RBL, IDBI, Union, AU SFB and 90+ more. International banks (Chase, Bank of America, Wells Fargo, HSBC, Citi, DBS, Standard Chartered, etc.) are also supported.' },
   { q: 'How accurate is the conversion?', a: 'For digitally-generated PDFs, accuracy is typically 99.5%+. For scanned/image PDFs, 95%+ depending on quality. Always review the Excel before final use — that\'s standard practice for any conversion tool.' },
-  { q: 'Is my data safe?', a: 'Yes. Files are processed in memory and never stored on our servers. Nothing is written to disk, and we don\'t share data with third parties.' },
+  { q: 'Is my data safe?', a: 'Yes — 100% private. Your files are parsed entirely on our servers, never sent to any third-party service. Data is processed in memory, never written to disk, and deleted the instant your download is ready. We cannot see your statements, and no one else can either.' },
   { q: 'Can I cancel anytime?', a: 'Yes. Cancel from your dashboard with one click. You keep access until the end of your billing period. No questions asked.' },
   { q: 'Do you offer a free trial?', a: 'Yes. The free plan gives you 50 pages every month, no credit card needed. If you need a one-off, grab a ₹49 day pass for 100 pages in 24 hours.' },
   { q: 'Does it work on password-protected PDFs?', a: 'Remove the password first using any free PDF unlocker (or Adobe Acrobat). Once unlocked, BankXL handles the rest.' },
@@ -114,7 +114,7 @@ const FEATURES_BENTO = [
     desc: 'Image-based statements from old passbooks? No problem. Built-in OCR reads scans at near-perfect accuracy — no manual cleanup needed.',
   },
   { icon: I.grid, title: '4 output formats', desc: 'Excel, CSV, JSON & Tally Prime XML. Drop straight into Tally, Zoho or QuickBooks.' },
-  { icon: I.lock, title: 'Zero data retention', desc: 'Processed in memory, never written to disk. Deleted instantly after conversion.' },
+  { icon: I.lock, title: '100% private — zero retention', desc: 'Your data never leaves our servers. No third-party services, no disk writes, no logs. Deleted the instant your download is ready.' },
   { icon: I.zap, title: '15-second conversions', desc: 'Even multi-page statements with 500+ transactions finish in seconds.' },
   { icon: I.target, title: 'CA-grade Excel', desc: 'Color-coded debits/credits, summary sheet, frozen headers, auto-filter.' },
   { icon: I.coins, title: 'Page-based pricing', desc: 'Pay only for what you use. 50 free pages monthly — no card required.' },

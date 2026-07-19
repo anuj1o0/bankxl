@@ -34,16 +34,17 @@ export default function Privacy() {
       </ul>
 
       <h2>2. What we do NOT store</h2>
-      <p><strong>We do not store the PDF files you upload.</strong> Files are processed in server memory and discarded the moment the conversion completes (success or failure). Nothing is written to disk.</p>
+      <p><strong>We do not store the PDF files you upload.</strong> Files are processed entirely in server memory and discarded the moment the conversion completes (success or failure). Nothing is written to disk — ever.</p>
       <p><strong>We do not store the extracted transactions.</strong> Transactions are returned to you in the output file (Excel/CSV/JSON/Tally) and never saved on our servers.</p>
-      <p><strong>We do not use your data for any purpose beyond the immediate conversion.</strong> Your statements are not used for any training, analytics, or sharing purposes.</p>
+      <p><strong>Your financial data never leaves our servers.</strong> All parsing is done by our deterministic engine running on our own infrastructure. Your bank statements are never sent to any third-party service for processing — no external APIs, no cloud AI, no data sharing of any kind.</p>
+      <p><strong>We cannot read your statements.</strong> There is no admin panel, no logging, and no mechanism for any person at BankXL to access or view the contents of your uploaded files.</p>
 
       <h2>3. Third-party services</h2>
+      <p>Your financial data (PDF contents, transactions) is <strong>never shared</strong> with any third party. The only external services we use are:</p>
       <ul>
-        <li><strong>Supabase</strong> — authentication and database (hosted in EU/US).</li>
-        <li><strong>Stripe</strong> — payment processing (PCI-DSS compliant).</li>
-        <li><strong>Cloud processing (fallback)</strong> — for rare statement formats our parser cannot handle, anonymized data may be sent to a cloud service for extraction. This is temporary and not retained.</li>
-        <li><strong>Vercel</strong> — hosting infrastructure.</li>
+        <li><strong>Supabase</strong> — authentication and account database only (hosted in EU/US). Does not receive your PDF or transaction data.</li>
+        <li><strong>Razorpay</strong> — payment processing (PCI-DSS compliant). Does not receive your PDF or transaction data.</li>
+        <li><strong>Vercel</strong> — hosting infrastructure. Processes your request but does not persist file contents beyond the request lifecycle.</li>
       </ul>
 
       <h2>4. Cookies</h2>

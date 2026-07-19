@@ -30,7 +30,7 @@ export default function About() {
             And because India's CA market needs price-fit — not enterprise pricing — we kept it at <strong>₹299/mo for unlimited</strong>. With a <strong>₹49 day pass</strong> for one-off jobs and a <strong>free tier</strong> that's actually useful (3 conversions/month, no card needed).
           </p>
           <p style={{ marginBottom: 18 }}>
-            We don't store your files. We don't train on your data. We don't sell anything to anyone. The only thing we sell is the converted Excel — and even that, we deliver in seconds and forget about.
+            <strong>100% private by design.</strong> Your data never leaves our servers — no third-party APIs, no external processing, no cloud services touching your financial data. Files are parsed in memory and deleted instantly. We can't read your statements even if we wanted to. The only thing we sell is the converted Excel — and even that, we deliver in seconds and forget about.
           </p>
           <p style={{ marginBottom: 32 }}>
             If you're an Indian CA or bookkeeper who's been losing hours to manual data entry — try us. We think you'll like it.

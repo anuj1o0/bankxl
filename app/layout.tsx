@@ -144,6 +144,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       'Convert bank statement PDF to CSV',
       'Tally XML export for direct import',
       'Works with SBI, HDFC, ICICI, Axis, Kotak and 500+ banks',
+      '100% private — data never leaves our servers',
       'OCR for scanned PDFs',
       'Team collaboration for CA firms',
       'Bulk conversion of multiple statements',
