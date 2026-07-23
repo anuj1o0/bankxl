@@ -14,6 +14,7 @@ export default function Footer() {
     {
       title: 'Convert to…', links: [
         ['Excel (.xlsx)', '/convert/bank-statement-to-excel'],
+        ['Tally Prime', '/convert/bank-statement-to-tally-prime'],
         ['Tally XML', '/convert/bank-statement-to-tally'],
         ['CSV', '/convert/bank-statement-to-csv'],
         ['JSON', '/convert/bank-statement-to-json'],
