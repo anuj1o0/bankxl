@@ -3,6 +3,7 @@ import { useState, useRef, useMemo } from 'react'
 import { useDashboard } from './DashboardContext'
 import { useConversions } from './ConversionsContext'
 import TopupButton from './TopupButton'
+import { track } from '@/lib/track'
 
 const FORMAT_ICONS: Record<string, React.ReactNode> = {
   excel: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="m9 12 6 6"/><path d="m15 12-6 6"/></>,
@@ -43,6 +44,7 @@ export default function InAppConverter() {
   const [format, setFormat] = useState<string>(profile?.default_format || 'excel')
   const [error, setError] = useState('')
   const [dragging, setDragging] = useState(false)
+  const [reportState, setReportState] = useState<'idle' | 'sending' | 'sent'>('idle')
   const fileRef = useRef<HTMLInputElement>(null)
 
   const myJob = useMemo(() => {
@@ -65,8 +67,27 @@ export default function InAppConverter() {
   }
 
   const reset = () => {
-    setFile(null); setError('')
+    setFile(null); setError(''); setReportState('idle')
     if (myJob) dismiss(myJob.id)
+  }
+
+  // Opt-in: only sent when the user clicks. Shares the failed PDF so we can add
+  // support for its format, then delete it.
+  const reportStatement = async () => {
+    if (!file || reportState !== 'idle') return
+    setReportState('sending')
+    track('sample_report_started', { format, source: 'dashboard' })
+    try {
+      const fd = new FormData()
+      fd.append('pdf', file)
+      if (myJob?.bank) fd.append('bank', myJob.bank)
+      const res = await fetch('/api/report-statement', { method: 'POST', body: fd })
+      if (!res.ok) throw new Error('report failed')
+      setReportState('sent')
+      track('sample_report_sent', { format, source: 'dashboard' })
+    } catch {
+      setReportState('idle')
+    }
   }
 
   const showJob = myJob && (myJob.status !== 'done' || !myJob.downloaded)
@@ -317,6 +338,36 @@ export default function InAppConverter() {
               {myJob.errorCanTopup ? 'Dismiss' : 'Try again'}
             </button>
           </div>
+
+          {/* Opt-in failed-sample sharing — parser/extraction failures only, and
+              only when we still hold the file. Never for out-of-pages. */}
+          {!myJob.errorCanTopup && file && (
+            <div style={{ margin: '22px auto 0', maxWidth: 420, padding: '14px 16px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 10, textAlign: 'left' }}>
+              {reportState === 'sent' ? (
+                <div style={{ fontSize: 12.5, color: 'var(--accent)', lineHeight: 1.6, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                  <span>✓</span>
+                  <span>Thanks — we&apos;ll use this statement only to add support for its format, then delete it.</span>
+                </div>
+              ) : (
+                <>
+                  <div style={{ fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.6, marginBottom: 10 }}>
+                    Not supported yet? Help us add it — we&apos;ll use this file <strong style={{ color: 'var(--text)' }}>only to improve the converter, then delete it</strong>. Nothing is shared unless you click.
+                  </div>
+                  <button
+                    onClick={reportStatement}
+                    disabled={reportState === 'sending'}
+                    style={{
+                      padding: '9px 16px', background: 'var(--surface)', border: '1px solid var(--border-strong)',
+                      borderRadius: 9, cursor: reportState === 'sending' ? 'default' : 'pointer',
+                      fontFamily: 'Sora,sans-serif', fontSize: 12.5, fontWeight: 600, color: 'var(--text)',
+                    }}
+                  >
+                    {reportState === 'sending' ? 'Sending…' : '📎 Send this statement to help fix it'}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
