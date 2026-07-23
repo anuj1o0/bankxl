@@ -14,7 +14,7 @@ const FORMATS = [
 
 export default function BulkPage() {
   const { isPaid } = useDashboard()
-  const { jobs, startJob, download, dismiss, clearAll } = useConversions()
+  const { jobs, startJob, download, dismiss, clearAll, reportSample } = useConversions()
   const [files, setFiles] = useState<File[]>([])
   const [running, setRunning] = useState(false)
   const [format, setFormat] = useState<'excel' | 'csv' | 'json' | 'tally'>('excel')
@@ -194,8 +194,21 @@ export default function BulkPage() {
                       RUNNING
                     </span>
                   )}
+                  {/* Opt-in share — parser/extraction failures only (not out-of-pages),
+                      and only while we still hold the source file. */}
+                  {j.status === 'error' && !j.errorCanTopup && j.file && (
+                    j.reportState === 'sent' ? (
+                      <span title="Thanks — we'll use it only to add support, then delete it" style={{ fontSize: 10, color: 'var(--accent)', whiteSpace: 'nowrap' }}>✓ Shared</span>
+                    ) : (
+                      <button onClick={() => reportSample(j.id)} disabled={j.reportState === 'sending'}
+                        title="Send this statement so we can add support for its format, then delete it"
+                        style={{ padding: '6px 11px', background: 'var(--surface)', color: 'var(--text-dim)', border: '1px solid var(--border-strong)', borderRadius: 6, fontSize: 11, fontWeight: 500, cursor: j.reportState === 'sending' ? 'default' : 'pointer', fontFamily: 'Sora,sans-serif', whiteSpace: 'nowrap' }}>
+                        {j.reportState === 'sending' ? 'Sending…' : '📎 Share'}
+                      </button>
+                    )
+                  )}
                   {j.status === 'error' && (
-                    <button onClick={() => dismiss(j.id)} style={{ width: 26, height: 26, borderRadius: 6, background: 'var(--hover)', color: 'var(--text-muted)', border: 'none', cursor: 'pointer' }}>
+                    <button onClick={() => dismiss(j.id)} style={{ width: 26, height: 26, borderRadius: 6, background: 'var(--hover)', color: 'var(--text-muted)', border: 'none', cursor: 'pointer', flexShrink: 0 }}>
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                     </button>
                   )}

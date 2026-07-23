@@ -22,6 +22,10 @@ export interface Job {
   warning?: string
   conversionId?: string
   downloaded?: boolean
+  // Source file kept ONLY while it may still be needed (in-flight, or a failure
+  // the user might opt to share). Cleared on success to free the reference.
+  file?: File
+  reportState?: 'idle' | 'sending' | 'sent'
 }
 
 interface Ctx {
@@ -33,6 +37,7 @@ interface Ctx {
   dismiss: (jobId: string) => void
   retry: (jobId: string) => void
   clearAll: () => void
+  reportSample: (jobId: string) => void
 }
 
 const ConversionsContext = createContext<Ctx | null>(null)
@@ -80,6 +85,7 @@ export function ConversionsProvider({ children, onComplete }: { children: ReactN
     const job: Job = {
       id, filename: file.name, format,
       status: 'queued', progress: 0, startedAt: Date.now(),
+      file, reportState: 'idle',
     }
     setJobs(prev => [job, ...prev])
     track('upload_started', { format, surface: 'dashboard' })
@@ -109,6 +115,7 @@ export function ConversionsProvider({ children, onComplete }: { children: ReactN
           txCount: out.txCount, pages: out.pages, bank: out.bank,
           warning: out.warning, conversionId: out.conversionId,
           completedAt: Date.now(),
+          file: undefined, // success: drop the source-file reference
         })
         track('conversion_complete', { format, surface: 'dashboard', pages: out.pages, txCount: out.txCount, bank: out.bank })
         onCompleteRef.current?.()
@@ -139,6 +146,26 @@ export function ConversionsProvider({ children, onComplete }: { children: ReactN
     updateJob(jobId, { downloaded: true })
   }, [jobs, updateJob])
 
+  // Opt-in: share a failed statement so we can add support for its format.
+  // Only sent when the user clicks; uses the source File retained on the job.
+  const reportSample = useCallback(async (jobId: string) => {
+    const j = jobs.find(x => x.id === jobId)
+    if (!j?.file || j.reportState === 'sending' || j.reportState === 'sent') return
+    updateJob(jobId, { reportState: 'sending' })
+    track('sample_report_started', { format: j.format, surface: 'bulk' })
+    try {
+      const fd = new FormData()
+      fd.append('pdf', j.file)
+      if (j.bank) fd.append('bank', j.bank)
+      const res = await fetch('/api/report-statement', { method: 'POST', body: fd })
+      if (!res.ok) throw new Error('report failed')
+      updateJob(jobId, { reportState: 'sent' })
+      track('sample_report_sent', { format: j.format, surface: 'bulk' })
+    } catch {
+      updateJob(jobId, { reportState: 'idle' })
+    }
+  }, [jobs, updateJob])
+
   const dismiss = useCallback((jobId: string) => {
     setJobs(prev => prev.filter(j => j.id !== jobId))
   }, [])
@@ -155,7 +182,7 @@ export function ConversionsProvider({ children, onComplete }: { children: ReactN
   const recent = jobs.filter(j => j.status === 'done' || j.status === 'error')
 
   return (
-    <ConversionsContext.Provider value={{ jobs, active, recent, startJob, download, dismiss, retry, clearAll }}>
+    <ConversionsContext.Provider value={{ jobs, active, recent, startJob, download, dismiss, retry, clearAll, reportSample }}>
       {children}
     </ConversionsContext.Provider>
   )
