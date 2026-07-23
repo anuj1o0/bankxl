@@ -62,6 +62,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const NEW_BLOG_SLUGS = new Set([
     'bank-statement-privacy-security', 'sbi-bank-statement-to-excel',
     'bank-statement-for-loan-application', 'automate-bank-reconciliation-for-ca-firms',
+    'open-password-protected-bank-statement-pdf',
   ])
   const blogPages = ALL_BLOG_SLUGS.map(slug => ({
     path: `/blog/${slug}`,

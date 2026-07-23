@@ -15,6 +15,7 @@ import type { ReactNode } from 'react'
  *   ✅ sbi-bank-statement-to-excel                     (2,100 mo, KD 15)
  *   ✅ bank-statement-for-loan-application             (1,800 mo, KD 25)
  *   ✅ automate-bank-reconciliation-for-ca-firms       (590 mo,   KD 20)
+ *   ✅ open-password-protected-bank-statement-pdf      (720 mo,   KD 14)
  */
 
 export interface BlogPost {
@@ -727,10 +728,11 @@ export const BLOG_POSTS: Record<string, BlogPost> = {
 
         <H2 id="password-pdfs">What if the PDF is password-protected?</H2>
         <P>
-          Most Indian bank e-statements are password-locked (often your date of birth or PAN). Open the PDF
-          once with the password in any PDF viewer, then <Strong>File → Print → Save as PDF</Strong> to
-          create an unlocked copy. Convert that copy — the original with the password works too on BankXL
-          since you enter the password once during upload.
+          Most Indian bank e-statements are password-locked (the exact password rule is printed in your
+          bank's statement email). Open the PDF once with the password in any PDF viewer, then{' '}
+          <Strong>File → Print → Save as PDF</Strong> to create an unlocked copy, and convert that. For the
+          step-by-step version — including where each bank tells you the password — see our{' '}
+          <A href="/blog/open-password-protected-bank-statement-pdf">guide to opening a password-protected bank statement PDF</A>.
         </P>
 
         <H2 id="after-convert">After converting: cleaning up the data</H2>
@@ -752,6 +754,151 @@ export const BLOG_POSTS: Record<string, BlogPost> = {
         <P style={{ marginTop: 40, fontSize: 14, color: 'var(--text-muted)', borderTop: '1px solid var(--border)', paddingTop: 24 }}>
           Questions about a specific bank's PDF format? Email{' '}
           <A href="mailto:support@banlxlai.com">support@banlxlai.com</A> and we'll help you sort it out.
+        </P>
+      </>
+    ),
+  },
+
+  'open-password-protected-bank-statement-pdf': {
+    slug: 'open-password-protected-bank-statement-pdf',
+    title: 'How to Open a Password-Protected Bank Statement PDF (2026 Guide)',
+    h1: 'How to open — and convert — a password-protected bank statement PDF',
+    metaDescription: 'Most Indian bank e-statements are password-locked. Here\'s how to find the password, open the PDF, remove the lock, and convert it to Excel — for SBI, HDFC, ICICI, Axis and any bank.',
+    keywords: [
+      'password protected bank statement pdf', 'how to open password protected bank statement',
+      'bank statement pdf password', 'remove password from bank statement pdf',
+      'unlock bank statement pdf', 'bank statement password format',
+      'open bank statement pdf password', 'convert password protected bank statement',
+    ],
+    category: 'guides',
+    publishedISO: '2026-07-23',
+    updatedISO: '2026-07-23',
+    readMinutes: 6,
+    author: { name: 'BankXL Team', role: 'Product & Accounting' },
+    excerpt: 'Almost every bank e-statement in India arrives password-locked. This guide shows you where to find the password, how to open the file, how to create an unlocked copy, and how to convert it to Excel — cleanly and safely.',
+    tocItems: [
+      { id: 'why-locked',      label: 'Why bank statements are password-protected' },
+      { id: 'find-password',   label: 'Where to find your statement password' },
+      { id: 'open-it',         label: 'How to open the PDF' },
+      { id: 'remove-password', label: 'How to create an unlocked copy' },
+      { id: 'convert',         label: 'Converting the unlocked statement to Excel' },
+      { id: 'safety',          label: 'Doing this safely' },
+    ],
+    cta: {
+      title: 'Convert your unlocked statement',
+      desc: 'Once your PDF is unlocked, drop it into BankXL and get clean Excel, CSV or Tally XML in 15 seconds — parsed privately on our servers, never shared with any third party.',
+      href: '/convert/bank-statement-to-excel',
+      label: 'Convert to Excel',
+    },
+    relatedSlugs: ['how-to-convert-bank-statement-to-excel', 'bank-statement-privacy-security'],
+    body: () => (
+      <>
+        <P>
+          If you've downloaded a bank statement in India, you've almost certainly hit this: you open the PDF
+          and it demands a password. Banks lock e-statements by default to protect your financial data in
+          transit. The good news — once you know where the password comes from, opening and converting the
+          statement takes about a minute.
+        </P>
+
+        <H2 id="why-locked">Why bank statements are password-protected</H2>
+        <P>
+          A bank statement is one of the most sensitive documents you own — it carries your account number,
+          balance, income and every transaction. Banks password-lock the PDF so that if the email or file is
+          intercepted or forwarded by mistake, the contents stay protected. It's a sensible default, even if
+          it's mildly annoying when you just want to open your own statement.
+        </P>
+
+        <H2 id="find-password">Where to find your statement password</H2>
+        <P>
+          <Strong>The password is set by your bank, not by you — and the exact rule is printed in the email or
+          SMS that delivered the statement.</Strong> This is the single most important thing to know: rather
+          than guessing, open the covering email from your bank and look for the line that says something like
+          "Your statement is password protected. The password is…". Every bank spells out its own rule there.
+        </P>
+        <P>
+          The password is almost always built from details you already know — some combination of your name,
+          date of birth, PAN, customer ID, or account number. Common patterns you'll see described in the
+          bank's email include:
+        </P>
+        <ul style={{ fontSize: 16, lineHeight: 1.75, color: 'var(--text-dim)', paddingLeft: 22 }}>
+          <li>Your <Strong>date of birth</Strong> in DDMMYYYY (or DDMMYY) format</li>
+          <li>Your <Strong>PAN</Strong>, sometimes combined with your date of birth</li>
+          <li>Your <Strong>customer ID</Strong> or <Strong>account number</Strong></li>
+          <li>The first few letters of your name (in capitals) plus part of your date of birth</li>
+        </ul>
+        <Callout title="Don't guess the format — confirm it" tone="tip">
+          Because the exact combination differs by bank (and occasionally changes), the reliable move is to
+          read the password rule stated in your bank's statement email rather than trying formats at random.
+          If you can't find the email, most banks also show the password rule on the statement-download page
+          in net banking, or you can request it from customer care.
+        </Callout>
+
+        <H2 id="open-it">How to open the PDF</H2>
+        <P>
+          Open the file in any PDF reader — Adobe Acrobat Reader, your browser, or your phone's PDF viewer —
+          and enter the password when prompted. Passwords are usually case-sensitive, so if your bank says the
+          name portion is in capitals, type it exactly that way. Once accepted, you can read the statement
+          normally.
+        </P>
+
+        <H2 id="remove-password">How to create an unlocked copy</H2>
+        <P>
+          To convert a statement (into Excel, Tally, or anything else), it's cleanest to work from an
+          <Strong> unlocked copy</Strong>. You don't need special software — the print-to-PDF trick works on
+          every device:
+        </P>
+        <Step n={1} title="Open the statement with its password">
+          <P>Open the locked PDF and enter the password so the contents are visible.</P>
+        </Step>
+        <Step n={2} title="Print to PDF">
+          <P>
+            Choose <Strong>File → Print</Strong> (or the print icon), then select
+            <Strong> "Save as PDF"</Strong> / <Strong>"Microsoft Print to PDF"</Strong> as the printer instead
+            of a physical printer. Save the new file.
+          </P>
+        </Step>
+        <Step n={3} title="You now have an unlocked copy">
+          <P>
+            The saved file opens without a password. It's a normal PDF you can convert, email, or archive —
+            keep it somewhere private, since it's no longer protected.
+          </P>
+        </Step>
+        <Callout title="On a phone?" tone="info">
+          The same works on mobile: open the statement with its password, tap Share → Print, then "Save as
+          PDF." On iPhone you can also open the locked PDF, tap Share, and save a copy — the exported file is
+          unlocked.
+        </Callout>
+
+        <H2 id="convert">Converting the unlocked statement to Excel</H2>
+        <P>
+          With an unlocked PDF in hand, converting to a spreadsheet is the easy part. Upload it to{' '}
+          <A href="/convert/bank-statement-to-excel">BankXL's converter</A> and you'll get a formatted Excel
+          file — debit/credit split into separate columns, running balance intact, junk rows removed — in
+          about 15 seconds. Need it in Tally instead? The same unlocked PDF works with the{' '}
+          <A href="/convert/bank-statement-to-tally-prime">Tally Prime converter</A>.
+        </P>
+
+        <H2 id="safety">Doing this safely</H2>
+        <P>
+          An unlocked statement is exactly as sensitive as the locked one — just without the lock. A few
+          sensible habits:
+        </P>
+        <ul style={{ fontSize: 16, lineHeight: 1.75, color: 'var(--text-dim)', paddingLeft: 22 }}>
+          <li>Store unlocked copies in a private folder, not a shared drive or desktop</li>
+          <li>Delete unlocked copies once you've converted or filed them</li>
+          <li>Only upload to a converter that processes privately and doesn't retain your file — see our{' '}
+            <A href="/blog/bank-statement-privacy-security">bank statement privacy guide</A> for what to check</li>
+          <li>Never email an unlocked statement without re-protecting or zipping it with a password</li>
+        </ul>
+        <P>
+          BankXL processes your unlocked PDF entirely on our own servers, parses it in memory, and deletes it
+          the instant your download is ready — nothing is written to disk, logged, or sent to any third-party
+          service.
+        </P>
+
+        <P style={{ marginTop: 40, fontSize: 14, color: 'var(--text-muted)', borderTop: '1px solid var(--border)', paddingTop: 24 }}>
+          Stuck on a specific bank's password or format? Email{' '}
+          <A href="mailto:support@banlxlai.com">support@banlxlai.com</A> and we'll point you in the right direction.
         </P>
       </>
     ),
