@@ -34,7 +34,8 @@ export default function Privacy() {
       </ul>
 
       <h2>2. What we do NOT store</h2>
-      <p><strong>We do not store the PDF files you upload.</strong> Files are processed entirely in server memory and discarded the moment the conversion completes (success or failure). Nothing is written to disk — ever.</p>
+      <p><strong>We do not store the PDF files you upload.</strong> Files are processed entirely in server memory and discarded the moment the conversion completes (success or failure). Nothing is written to disk during conversion.</p>
+      <p><strong>The one exception is your choice.</strong> If a conversion fails because we don't yet support your bank's format, we show a button offering to send us that file so we can add support for it. That file is stored — privately and securely, accessible only to us — <strong>only if you explicitly click that button</strong>. We use it solely to improve our converter and delete it once support is added. We never store a file you didn't choose to share.</p>
       <p><strong>We do not store the extracted transactions.</strong> Transactions are returned to you in the output file (Excel/CSV/JSON/Tally) and never saved on our servers.</p>
       <p><strong>Your financial data never leaves our servers.</strong> All parsing is done by our deterministic engine running on our own infrastructure. Your bank statements are never sent to any third-party service for processing — no external APIs, no cloud AI, no data sharing of any kind.</p>
       <p><strong>We cannot read your statements.</strong> There is no admin panel, no logging, and no mechanism for any person at BankXL to access or view the contents of your uploaded files.</p>
@@ -42,7 +43,7 @@ export default function Privacy() {
       <h2>3. Third-party services</h2>
       <p>Your financial data (PDF contents, transactions) is <strong>never shared</strong> with any third party. The only external services we use are:</p>
       <ul>
-        <li><strong>Supabase</strong> — authentication and account database only (hosted in EU/US). Does not receive your PDF or transaction data.</li>
+        <li><strong>Supabase</strong> — authentication and account database (hosted in EU/US). It does not receive your PDF or transaction data, except the single failed sample you may explicitly choose to share with us (see section 2), which is held in private storage only we can access.</li>
         <li><strong>Razorpay</strong> — payment processing (PCI-DSS compliant). Does not receive your PDF or transaction data.</li>
         <li><strong>Vercel</strong> — hosting infrastructure. Processes your request but does not persist file contents beyond the request lifecycle.</li>
       </ul>

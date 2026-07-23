@@ -36,6 +36,10 @@ export default function Converter({ user, freeMode, initialFormat = 'excel', sho
   const [activeStep, setActiveStep] = useState(0)
   const [result, setResult] = useState<Result | null>(null)
   const [error, setError] = useState('')
+  // Opt-in failed-sample sharing: only offered for extraction failures (not
+  // usage/network errors), only sent when the user clicks.
+  const [canReport, setCanReport] = useState(false)
+  const [reportState, setReportState] = useState<'idle' | 'sending' | 'sent'>('idle')
   const fileRef = useRef<HTMLInputElement>(null)
 
   const handleFile = (f: File) => {
@@ -110,9 +114,14 @@ export default function Converter({ user, freeMode, initialFormat = 'excel', sho
       out = await apiPromise
     } catch (e: any) {
       const isNetwork = !(e instanceof ConvertError)
-      track('conversion_failed', { format, reason: isNetwork ? 'network_error' : (e.canTopup ? 'usage_limit' : 'extraction_error') })
+      const isUsage = e instanceof ConvertError && e.canTopup
+      track('conversion_failed', { format, reason: isNetwork ? 'network_error' : (isUsage ? 'usage_limit' : 'extraction_error') })
       setStage('error')
       setError(isNetwork ? 'Network error. Check your connection.' : (e.message || 'Conversion failed.'))
+      // Offer opt-in sample sharing only when the parser couldn't handle the
+      // file — not for quota or connectivity problems.
+      setCanReport(!isNetwork && !isUsage)
+      setReportState('idle')
       return
     }
 
@@ -138,8 +147,26 @@ export default function Converter({ user, freeMode, initialFormat = 'excel', sho
     URL.revokeObjectURL(url)
   }
 
+  const reportStatement = async () => {
+    if (!file || reportState !== 'idle') return
+    setReportState('sending')
+    track('sample_report_started', { format })
+    try {
+      const fd = new FormData()
+      fd.append('pdf', file)
+      const res = await fetch('/api/report-statement', { method: 'POST', body: fd })
+      if (!res.ok) throw new Error('report failed')
+      setReportState('sent')
+      track('sample_report_sent', { format })
+    } catch {
+      // Soft-fail: keep the button so they can retry.
+      setReportState('idle')
+    }
+  }
+
   const reset = () => {
     setFile(null); setStage('idle'); setProgress(0); setActiveStep(0); setResult(null); setError('')
+    setCanReport(false); setReportState('idle')
   }
 
   return (
@@ -207,6 +234,34 @@ export default function Converter({ user, freeMode, initialFormat = 'excel', sho
           {error && (
             <div style={{ margin: '0 20px 14px', padding: '12px 14px', background: 'var(--error-bg)', border: '1px solid var(--error-border)', borderRadius: 10, fontSize: 13, color: 'var(--error)' }}>
               {error}
+            </div>
+          )}
+
+          {error && canReport && (
+            <div style={{ margin: '0 20px 16px', padding: '14px 16px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 10 }}>
+              {reportState === 'sent' ? (
+                <div style={{ fontSize: 12.5, color: 'var(--accent)', lineHeight: 1.6, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                  <span>✓</span>
+                  <span>Thanks — we&apos;ll use this statement only to add support for this format, then delete it.</span>
+                </div>
+              ) : (
+                <>
+                  <div style={{ fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.6, marginBottom: 10 }}>
+                    This statement isn&apos;t supported yet. Help us add it? We&apos;ll use this file <strong style={{ color: 'var(--text)' }}>only to improve the converter, then delete it</strong> — nothing is shared unless you click.
+                  </div>
+                  <button
+                    onClick={reportStatement}
+                    disabled={reportState === 'sending'}
+                    style={{
+                      padding: '9px 16px', background: 'var(--surface)', border: '1px solid var(--border-strong)',
+                      borderRadius: 9, cursor: reportState === 'sending' ? 'default' : 'pointer',
+                      fontFamily: 'Sora,sans-serif', fontSize: 12.5, fontWeight: 600, color: 'var(--text)',
+                    }}
+                  >
+                    {reportState === 'sending' ? 'Sending…' : '📎 Send this statement to help fix it'}
+                  </button>
+                </>
+              )}
             </div>
           )}
 

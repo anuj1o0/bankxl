@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { generateExcel } from '@/lib/excel'
 import { toCSV, toJSON, toTallyXML, FORMAT_INFO, ExportFormat } from '@/lib/formats'
 import { validatePdf, PdfValidationError } from '@/lib/pdf-validation'
-import { parseStatement, ParserError, toLegacyTransactions, toLegacyMeta } from '@/lib/parser'
+import { parseStatement, ParserError, toLegacyTransactions, toLegacyMeta, PARSER_VERSION } from '@/lib/parser'
 import {
   getUser, checkUsage, recordConversion, updateConversion, consumePages, isValidFormat,
+  recordParserFailure,
 } from '../pipeline'
 
 // Deterministic-engine-only conversion endpoint. No AI, no external calls:
@@ -94,14 +95,44 @@ export async function POST(req: NextRequest) {
       ? err.toShape()
       : { code: 'INTERNAL' as const, message: String((err as Error)?.message ?? err), stage: 'pdf-extraction' as const, details: {} }
     console.warn(`[convert:local] engine declined ${file.name} (${pageCount}p): ${shape.code} @ ${shape.stage} — ${shape.message}`)
+    // Non-PII telemetry: the engine threw before producing a result, so we only
+    // have the structural error shape + file size/pages. No content is recorded.
+    await recordParserFailure({
+      userId: user.id,
+      pageCount,
+      fileSizeBytes: file.size,
+      failureCode: shape.code,
+      failureStage: shape.stage,
+      failureMessage: shape.message,
+      parserVersion: PARSER_VERSION,
+      formatRequested: format,
+    })
     return decline(shape.code)
   }
 
   if (parsed.validation.verdict === 'fail') {
+    const recon = parsed.validation.reconciliation
     console.warn(
       `[convert:local] engine result rejected by validator for ${file.name}: ` +
-        `${parsed.validation.reconciliation.reconciledLinks}/${parsed.validation.reconciliation.checkableLinks} reconciled`
+        `${recon.reconciledLinks}/${recon.checkableLinks} reconciled`
     )
+    // Non-PII telemetry: bank name is the institution, not the account holder;
+    // counts/confidence are structural. No transactions or amounts recorded.
+    await recordParserFailure({
+      userId: user.id,
+      bankDetected: toLegacyMeta(parsed.meta).bank_name || null,
+      pageCount,
+      fileSizeBytes: file.size,
+      failureCode: 'VALIDATION_FAILED',
+      failureStage: 'validation',
+      parserVersion: parsed.parserVersion,
+      confidence: parsed.confidence,
+      reconciledLinks: recon.reconciledLinks,
+      checkableLinks: recon.checkableLinks,
+      breaks: recon.breaks.length,
+      transactionsExtracted: parsed.transactions.length,
+      formatRequested: format,
+    })
     return decline('VALIDATION_FAILED')
   }
 

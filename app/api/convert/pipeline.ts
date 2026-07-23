@@ -239,6 +239,69 @@ export function isValidFormat(s: any): s is ExportFormat {
   return s === 'excel' || s === 'csv' || s === 'json' || s === 'tally'
 }
 
+// ─── Parser failure telemetry ────────────────────────────────────────────────
+// Records a diagnostic row when the deterministic engine DECLINES a statement,
+// so we can see which banks/formats/stages need parser work. STRICTLY non-PII:
+// pass only structural signals (bank name, page count, failure code/stage,
+// confidence, reconciliation counts). NEVER pass transactions, amounts, names,
+// account numbers, the filename, or the file — those must never reach this table.
+export interface ParserFailureRecord {
+  userId: string
+  bankDetected?: string | null
+  pageCount?: number | null
+  fileSizeBytes?: number | null
+  failureCode: string
+  failureStage?: string | null
+  failureMessage?: string | null
+  parserVersion?: string | null
+  confidence?: number | null
+  reconciledLinks?: number | null
+  checkableLinks?: number | null
+  breaks?: number | null
+  transactionsExtracted?: number | null
+  formatRequested?: string | null
+  sampleShared?: boolean
+  samplePath?: string | null
+}
+
+function looksLikeUuid(s: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s)
+}
+
+export async function recordParserFailure(rec: ParserFailureRecord): Promise<string | null> {
+  try {
+    const { createServiceSupabase } = await import('@/lib/supabase-server')
+    const sb = createServiceSupabase()
+    const { data, error } = await sb.from('parser_failures').insert({
+      // dev-user and any non-uuid id become null (FK is auth.users).
+      user_id: looksLikeUuid(rec.userId) ? rec.userId : null,
+      bank_detected: rec.bankDetected ?? null,
+      page_count: rec.pageCount ?? null,
+      file_size_bytes: rec.fileSizeBytes ?? null,
+      failure_code: rec.failureCode,
+      failure_stage: rec.failureStage ?? null,
+      // Truncate: these are structural dev messages, but cap length defensively.
+      failure_message: rec.failureMessage ? rec.failureMessage.slice(0, 300) : null,
+      parser_version: rec.parserVersion ?? null,
+      confidence: rec.confidence ?? null,
+      reconciled_links: rec.reconciledLinks ?? null,
+      checkable_links: rec.checkableLinks ?? null,
+      breaks: rec.breaks ?? null,
+      transactions_extracted: rec.transactionsExtracted ?? null,
+      format_requested: rec.formatRequested ?? null,
+      sample_shared: rec.sampleShared ?? false,
+      sample_path: rec.samplePath ?? null,
+    }).select('id').single()
+    // Fails harmlessly (logged) until migration 003 is applied — never blocks
+    // the user-facing response.
+    if (error) console.error('recordParserFailure error:', error.message)
+    return data?.id ?? null
+  } catch (e: any) {
+    console.error('recordParserFailure exception:', e?.message)
+    return null
+  }
+}
+
 // Shared constants for the chunked flow — the client orchestrator mirrors
 // these (lib/convert-client.ts); keep them in sync.
 //
