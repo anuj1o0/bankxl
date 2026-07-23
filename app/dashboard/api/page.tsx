@@ -63,14 +63,14 @@ export default function ApiPage() {
   }
 
   const examples: Record<string, string> = {
-    curl: `curl -X POST "https://banlxlai.com/api/v1/convert?format=json" \\
+    curl: `curl -X POST "https://www.banlxlai.com/api/v1/convert?format=json" \\
   -H "Authorization: Bearer ${showKey ? apiKey : 'YOUR_API_KEY'}" \\
   -F "pdf=@statement.pdf"`,
     python: `import requests
 
 with open("statement.pdf", "rb") as f:
     r = requests.post(
-        "https://banlxlai.com/api/v1/convert?format=json",
+        "https://www.banlxlai.com/api/v1/convert?format=json",
         headers={"Authorization": "Bearer ${showKey ? apiKey : 'YOUR_API_KEY'}"},
         files={"pdf": f}
     )
@@ -80,7 +80,7 @@ print(f"Bank: {data['meta']['bank_name']}")`,
     node: `import fs from 'node:fs'
 
 const file = fs.readFileSync('statement.pdf')
-const r = await fetch('https://banlxlai.com/api/v1/convert?format=json', {
+const r = await fetch('https://www.banlxlai.com/api/v1/convert?format=json', {
   method: 'POST',
   headers: {
     'Authorization': 'Bearer ${showKey ? apiKey : 'YOUR_API_KEY'}',

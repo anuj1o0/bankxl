@@ -95,7 +95,7 @@ export const BLOG_POSTS: Record<string, BlogPost> = {
 
   'how-to-import-bank-statement-in-tally-prime': {
     slug: 'how-to-import-bank-statement-in-tally-prime',
-    title: 'How to Import Bank Statement in Tally Prime (2026 Complete Guide)',
+    title: 'How to Import Bank Statement in Tally Prime (Free Converter, 2026)',
     h1: 'How to import a bank statement into Tally Prime — the fast way',
     metaDescription: 'Step-by-step guide to importing a bank statement PDF into Tally Prime as vouchers. Covers XML format, Ctrl+I import, error fixes, and works for Tally ERP 9 too.',
     keywords: [

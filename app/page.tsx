@@ -7,8 +7,26 @@ import Footer from '@/components/Footer'
 import Converter from '@/components/Converter'
 import AnimatedNumber from '@/components/AnimatedNumber'
 
-const BANKS_ROW_1 = ['SBI', 'HDFC Bank', 'ICICI Bank', 'Axis Bank', 'Kotak', 'PNB', 'Yes Bank', 'Canara Bank', 'Bank of Baroda', 'IDFC First', 'IndusInd']
-const BANKS_ROW_2 = ['Federal Bank', 'Union Bank', 'RBL', 'IDBI', 'AU SFB', 'Chase', 'Bank of America', 'Wells Fargo', 'Barclays', 'HSBC', 'Citi', 'ANZ']
+// Each marquee chip links to its /banks/[slug] page — homepage internal links
+// are the strongest authority signal we control, and the bank pages are our
+// best organic rankers. Entries without a `slug` have no dedicated page yet and
+// render as plain text (no broken links). Add the slug when a page ships.
+type MarqueeBank = { label: string; slug?: string }
+const BANKS_ROW_1: MarqueeBank[] = [
+  { label: 'SBI', slug: 'sbi' }, { label: 'HDFC Bank', slug: 'hdfc' },
+  { label: 'ICICI Bank', slug: 'icici' }, { label: 'Axis Bank', slug: 'axis' },
+  { label: 'Kotak', slug: 'kotak' }, { label: 'PNB', slug: 'pnb' },
+  { label: 'Yes Bank', slug: 'yes-bank' }, { label: 'Canara Bank', slug: 'canara' },
+  { label: 'Bank of Baroda', slug: 'bank-of-baroda' }, { label: 'IDFC First', slug: 'idfc-first' },
+  { label: 'IndusInd', slug: 'indusind' },
+]
+const BANKS_ROW_2: MarqueeBank[] = [
+  { label: 'Federal Bank', slug: 'federal' }, { label: 'Union Bank', slug: 'union-bank' },
+  { label: 'RBL', slug: 'rbl' }, { label: 'IDBI' }, { label: 'AU SFB', slug: 'au-sfb' },
+  { label: 'Chase', slug: 'chase' }, { label: 'Bank of America', slug: 'bank-of-america' },
+  { label: 'Wells Fargo', slug: 'wells-fargo' }, { label: 'Barclays', slug: 'barclays' },
+  { label: 'HSBC', slug: 'hsbc' }, { label: 'Citi', slug: 'citibank' }, { label: 'ANZ' },
+]
 
 const TESTIMONIALS = [
   { name: 'Rajesh Agarwal', role: 'Chartered Accountant, Delhi', text: 'I used to spend 2 hours re-typing every client\'s SBI and HDFC statements. BankXL does it in 20 seconds. Honestly the best money I spend each month.', rating: 5 },
@@ -127,6 +145,16 @@ const STEPS = [
   { n: '03', icon: I.download, label: 'Download clean output', sub: 'Excel, CSV, JSON or Tally XML. Color-coded, filtered, ready to import.' },
 ]
 
+function BankChip({ bank, dup }: { bank: MarqueeBank; dup: boolean }) {
+  // The marquee renders each row twice for the seamless scroll loop. Only the
+  // first copy carries the real link; the duplicate is aria-hidden decoration
+  // so crawlers and screen readers see each bank once, not twice.
+  if (dup || !bank.slug) {
+    return <span className="bank-chip mono" aria-hidden={dup || undefined}>{bank.label}</span>
+  }
+  return <Link href={`/banks/${bank.slug}`} className="bank-chip mono">{bank.label}</Link>
+}
+
 export default function LandingPage() {
   const [user, setUser] = useState<any>(null)
   const [openFaq, setOpenFaq] = useState<number | null>(null)
@@ -232,16 +260,12 @@ export default function LandingPage() {
         </div>
         <div className="marquee" style={{ marginBottom: 10 }}>
           <div className="marquee-track">
-            {[...BANKS_ROW_1, ...BANKS_ROW_1].map((b, i) => (
-              <span key={i} className="bank-chip mono">{b}</span>
-            ))}
+            {[...BANKS_ROW_1, ...BANKS_ROW_1].map((b, i) => <BankChip key={i} bank={b} dup={i >= BANKS_ROW_1.length} />)}
           </div>
         </div>
         <div className="marquee">
           <div className="marquee-track" style={{ animationDirection: 'reverse', animationDuration: '44s' }}>
-            {[...BANKS_ROW_2, ...BANKS_ROW_2].map((b, i) => (
-              <span key={i} className="bank-chip mono">{b}</span>
-            ))}
+            {[...BANKS_ROW_2, ...BANKS_ROW_2].map((b, i) => <BankChip key={i} bank={b} dup={i >= BANKS_ROW_2.length} />)}
           </div>
         </div>
         <div style={{ textAlign: 'center', marginTop: 18 }}>
@@ -474,6 +498,7 @@ export default function LandingPage() {
       <Footer />
       <style jsx>{`
         .bank-chip {
+          display: inline-block;
           font-size: 12.5px;
           padding: 9px 18px;
           border-radius: 999px;
@@ -483,6 +508,12 @@ export default function LandingPage() {
           white-space: nowrap;
           flex-shrink: 0;
           box-shadow: var(--shadow-sm);
+          text-decoration: none;
+          transition: color 0.18s ease, border-color 0.18s ease;
+        }
+        a.bank-chip:hover {
+          color: var(--accent);
+          border-color: var(--accent-border);
         }
         @media (max-width: 960px) {
           .hero-grid { grid-template-columns: 1fr !important; }

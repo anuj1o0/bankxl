@@ -4,8 +4,9 @@ import Link from 'next/link'
 import Nav from '@/components/Nav'
 import Footer from '@/components/Footer'
 import { BANK_PAGES, ALL_BANK_SLUGS } from './data'
+import { resolveSiteUrl } from '@/lib/site-url'
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://banlxlai.com'
+const APP_URL = resolveSiteUrl()
 
 interface Props {
   params: { bank: string }
@@ -22,8 +23,15 @@ export function generateMetadata({ params }: Props): Metadata {
   const ogTitle = encodeURIComponent(`${data.shortName} Bank Statement to Excel`)
   const ogSub = encodeURIComponent(`Free converter — no manual entry needed`)
 
+  // Keyword-first, intent-matched titles: lead with the exact "[Bank] Statement
+  // PDF to Excel" phrase people search, name the secondary format (Tally for
+  // India, CSV/QuickBooks for US), then the free hook. The layout template
+  // appends " | BankXL" automatically, so brand stays last without repeating it.
+  const secondaryFormat = data.country === 'US' ? 'CSV' : 'Tally'
+  const title = `Convert ${data.name} Statement PDF to Excel & ${secondaryFormat} — Free`
+
   return {
-    title: `${data.name} Statement PDF to Excel Converter — Free`,
+    title,
     description: data.metaDescription,
     keywords: data.keywords,
     alternates: { canonical: `/banks/${params.bank}` },

@@ -59,12 +59,12 @@ export default function ApiDocsPage() {
         <H3>Request body</H3>
         <P>Two ways to send a PDF:</P>
         <P><strong>1. multipart/form-data</strong> with field name <code style={{ color: 'var(--accent)' }}>pdf</code>:</P>
-        <Code>{`curl -X POST "https://banlxlai.com/api/v1/convert?format=json" \\
+        <Code>{`curl -X POST "https://www.banlxlai.com/api/v1/convert?format=json" \\
   -H "Authorization: Bearer bxl_YOUR_KEY" \\
   -F "pdf=@statement.pdf"`}</Code>
 
         <P><strong>2. Raw PDF</strong> as request body:</P>
-        <Code>{`curl -X POST "https://banlxlai.com/api/v1/convert?format=excel" \\
+        <Code>{`curl -X POST "https://www.banlxlai.com/api/v1/convert?format=excel" \\
   -H "Authorization: Bearer bxl_YOUR_KEY" \\
   -H "Content-Type: application/pdf" \\
   --data-binary @statement.pdf \\
@@ -103,7 +103,7 @@ export default function ApiDocsPage() {
 
 with open("statement.pdf", "rb") as f:
     r = requests.post(
-        "https://banlxlai.com/api/v1/convert?format=json",
+        "https://www.banlxlai.com/api/v1/convert?format=json",
         headers={"Authorization": "Bearer bxl_YOUR_KEY"},
         files={"pdf": f}
     )
@@ -114,7 +114,7 @@ print(f"Found {len(data['transactions'])} transactions")`}</Code>
         <Code>{`import fs from 'node:fs'
 
 const file = fs.readFileSync('statement.pdf')
-const r = await fetch('https://banlxlai.com/api/v1/convert?format=json', {
+const r = await fetch('https://www.banlxlai.com/api/v1/convert?format=json', {
   method: 'POST',
   headers: {
     'Authorization': 'Bearer bxl_YOUR_KEY',

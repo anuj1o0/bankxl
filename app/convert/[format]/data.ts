@@ -188,7 +188,7 @@ export const CONVERT_PAGES: Record<string, ConvertPageData> = {
     format: 'Tally XML',
     ext: 'xml',
     primaryKeyword: 'bank statement to tally',
-    metaTitle: 'Bank Statement PDF to Tally XML Converter — Free',
+    metaTitle: 'Bank Statement to Tally XML Converter (Tally Prime Ready) — Free',
     metaDescription: 'Convert bank statement PDFs directly to Tally-import-ready XML. Works with Tally Prime and Tally ERP 9. No manual voucher entry — just Ctrl+I in Tally. 500+ banks supported.',
     keywords: [
       'bank statement to tally', 'bank statement to tally xml',

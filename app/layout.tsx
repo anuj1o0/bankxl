@@ -1,9 +1,13 @@
 ﻿import type { Metadata, Viewport } from 'next'
 import { ThemeProvider, NO_FLASH_SCRIPT } from '@/components/Theme'
 import { Analytics } from '@vercel/analytics/next'
+import { resolveSiteUrl } from '@/lib/site-url'
 import './globals.css'
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://banlxlai.com'
+// Canonical base = www (Vercel redirects apex → www). resolveSiteUrl forces
+// this even if NEXT_PUBLIC_APP_URL is stale, so metadataBase, canonicals and
+// JSON-LD never advertise the apex and split the domain's authority.
+const APP_URL = resolveSiteUrl()
 const OG_IMAGE = `${APP_URL}/api/og`
 
 export const metadata: Metadata = {
