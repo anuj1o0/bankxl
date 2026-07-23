@@ -30,7 +30,7 @@ export default function Refund() {
       <p>Your Pro/Firm features remain active until the end of the current billing period.</p>
 
       <h2>How to delete your account</h2>
-      <p>Email <a href="mailto:privacy@banlxlai.com">privacy@banlxlai.com</a>. We will delete your account and all associated data within 7 days.</p>
+      <p>Email <a href="mailto:support@banlxlai.com">support@banlxlai.com</a>. We will delete your account and all associated data within 7 days.</p>
 
       <h2>Refund timing</h2>
       <p>Once approved, refunds are issued by Stripe and typically arrive in 5–10 business days, depending on your card issuer.</p>

@@ -919,7 +919,7 @@ export const BLOG_POSTS: Record<string, BlogPost> = {
         <P style={{ marginTop: 40, fontSize: 14, color: 'var(--text-muted)', borderTop: '1px solid var(--border)', paddingTop: 24 }}>
           Have questions about how BankXL handles your data? Read our full{' '}
           <A href="/privacy">privacy policy</A> or email{' '}
-          <A href="mailto:privacy@banlxlai.com">privacy@banlxlai.com</A>.
+          <A href="mailto:support@banlxlai.com">support@banlxlai.com</A>.
         </P>
       </>
     ),

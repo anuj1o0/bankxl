@@ -45,15 +45,15 @@ export default function Contact() {
             icon="🔒"
             title="Privacy & data"
             desc="For GDPR/data deletion and privacy questions."
-            link="mailto:privacy@banlxlai.com"
-            action="privacy@banlxlai.com →"
+            link="mailto:support@banlxlai.com"
+            action="support@banlxlai.com →"
           />
           <Card
             icon="💼"
             title="Sales & enterprise"
             desc="For CA firms with 10+ users or volume pricing."
-            link="mailto:sales@banlxlai.com"
-            action="sales@banlxlai.com →"
+            link="mailto:support@banlxlai.com"
+            action="support@banlxlai.com →"
           />
           <Card
             icon="🐛"

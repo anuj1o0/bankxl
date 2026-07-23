@@ -163,6 +163,4 @@ Aim: first 10 paying users in 30 days.
 
 ## Support
 
-- support@banlxlai.com (general)
-- privacy@banlxlai.com (data/GDPR)
-- sales@banlxlai.com (enterprise)
+- support@banlxlai.com (all inquiries — support, privacy, sales)
