@@ -6,6 +6,7 @@ import Nav from '@/components/Nav'
 import Footer from '@/components/Footer'
 import Converter from '@/components/Converter'
 import AnimatedNumber from '@/components/AnimatedNumber'
+import ExitIntentModal from '@/components/ExitIntentModal'
 
 // Each marquee chip links to its /banks/[slug] page — homepage internal links
 // are the strongest authority signal we control, and the bank pages are our
@@ -468,8 +469,9 @@ export default function LandingPage() {
               <h2 className="display" style={{ fontSize: 'clamp(32px, 4.4vw, 52px)', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 16, color: '#ffffff', lineHeight: 1.08 }}>
                 Stop typing.<br />Start converting.
               </h2>
-              <p style={{ fontSize: 16.5, color: 'rgba(255,255,255,0.72)', marginBottom: 36, lineHeight: 1.65, maxWidth: 480, marginLeft: 'auto', marginRight: 'auto' }}>
-                50 free pages every month. No credit card. No commitment.
+              <p style={{ fontSize: 16.5, color: 'rgba(255,255,255,0.72)', marginBottom: 36, lineHeight: 1.65, maxWidth: 520, marginLeft: 'auto', marginRight: 'auto' }}>
+                50 free pages every month. No credit card. No commitment.<br />
+                Just a one-off job? Grab a <strong style={{ color: '#fff', fontWeight: 700 }}>₹49 day pass</strong> — 100 pages, 24 hours, no subscription.
               </p>
               <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
                 <Link href="/login?signup=true" style={{
@@ -496,6 +498,7 @@ export default function LandingPage() {
       </section>
 
       <Footer />
+      <ExitIntentModal enabled={!user} />
       <style jsx>{`
         .bank-chip {
           display: inline-block;

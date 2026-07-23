@@ -301,6 +301,19 @@ export default function Converter({ user, freeMode, initialFormat = 'excel', sho
             Download {format.toUpperCase()} file
           </button>
           <button onClick={reset} style={{ background: 'none', border: 'none', fontSize: 13, color: 'var(--text-muted)', cursor: 'pointer', fontFamily: 'Sora,sans-serif' }}>Convert another →</button>
+
+          {/* Post-conversion upsell — the highest-intent moment: they just saw
+              the output work. Neutral phrasing so it fits free→Pro and Pro→Firm. */}
+          <div style={{ marginTop: 18, paddingTop: 16, borderTop: '1px solid var(--border)', fontSize: 12.5, color: 'var(--text-muted)' }}>
+            Doing this every month?{' '}
+            <a
+              href="/pricing"
+              onClick={() => track('post_convert_upsell_click', { format })}
+              style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 600 }}
+            >
+              See plans — Pro ₹499/mo or ₹49 day pass →
+            </a>
+          </div>
         </div>
       )}
     </div>
