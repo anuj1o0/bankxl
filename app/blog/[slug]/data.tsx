@@ -122,9 +122,9 @@ export const BLOG_POSTS: Record<string, BlogPost> = {
     ],
     cta: {
       title: 'Skip the manual voucher entry',
-      desc: 'BankXL converts any bank PDF into a Tally-import-ready XML in 15 seconds. One Ctrl+I in Tally and every transaction lands as a proper voucher.',
-      href: '/convert/bank-statement-to-tally',
-      label: 'Try the Tally XML converter',
+      desc: 'BankXL converts any bank PDF into a Tally Prime-import-ready XML in 15 seconds. One Ctrl+I in Tally Prime and every transaction lands as a proper voucher.',
+      href: '/convert/bank-statement-to-tally-prime',
+      label: 'Try the Tally Prime converter',
     },
     relatedSlugs: ['best-bank-statement-converters-2026', 'how-to-convert-bank-statement-to-excel', 'automate-bank-reconciliation-for-ca-firms'],
     body: () => (
@@ -176,9 +176,9 @@ export const BLOG_POSTS: Record<string, BlogPost> = {
 
         <Step n={1} title="Convert the bank PDF into Tally XML">
           <P>
-            Upload the PDF to <A href="/convert/bank-statement-to-tally">BankXL's Tally XML converter</A>.
+            Upload the PDF to <A href="/convert/bank-statement-to-tally-prime">BankXL's Tally Prime converter</A>.
             It detects the bank automatically, extracts every transaction with its reference number, and
-            emits a Tally-schema XML file. Takes about 15 seconds for a typical monthly statement.
+            emits a Tally Prime-schema XML file. Takes about 15 seconds for a typical monthly statement.
           </P>
           <P>
             The file it gives you is a proper Tally schema XML — receipts on the credit side, payments on

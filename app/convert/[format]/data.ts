@@ -1,12 +1,13 @@
 /**
  * app/convert/[format]/data.ts — content for format-specific landing pages.
  *
- * These 4 pages target the highest-volume "bank statement to X" queries
+ * These pages target the highest-volume "bank statement to X" queries
  * identified in the SEO growth strategy:
- *   • /convert/bank-statement-to-excel  — 2,400 mo searches
- *   • /convert/bank-statement-to-csv    — 720   mo searches
- *   • /convert/bank-statement-to-tally  — 480   mo searches (India goldmine)
- *   • /convert/bank-statement-to-json   — 140   mo searches
+ *   • /convert/bank-statement-to-excel        — 2,400 mo searches
+ *   • /convert/bank-statement-to-csv          — 720   mo searches
+ *   • /convert/bank-statement-to-tally        — 480   mo searches (India goldmine)
+ *   • /convert/bank-statement-to-tally-prime  — 88+   mo (exact "tally prime" family, GSC)
+ *   • /convert/bank-statement-to-json         — 140   mo searches
  *
  * Each page is statically generated at build time via generateStaticParams.
  */
@@ -249,6 +250,79 @@ export const CONVERT_PAGES: Record<string, ConvertPageData> = {
         a: 'It requires the Pro plan (₹499/month for 800 pages). Free users get Excel export. The Pro plan pays for itself on the first client statement you don\'t have to type by hand.' },
       { q: 'Can I use this with online-Tally / cloud-Tally setups?',
         a: 'Yes. Download the XML from BankXL, upload it to whichever machine runs your Tally instance, and import as usual. The XML file is portable and small (usually under 1 MB).' },
+    ],
+    proOnly: true,
+  },
+
+  // ─── Tally Prime (its own query family — GSC shows 88 impressions on the
+  //     exact phrase "bank statement to tally prime"). Deliberately Prime-first
+  //     and distinct from /bank-statement-to-tally (which covers ERP 9 too) to
+  //     avoid cannibalisation — the two interlink as a cluster. ──────────────
+  'bank-statement-to-tally-prime': {
+    slug: 'bank-statement-to-tally-prime',
+    format: 'Tally Prime XML',
+    ext: 'xml',
+    primaryKeyword: 'bank statement to tally prime',
+    metaTitle: 'Bank Statement to Tally Prime Converter (Free, Ctrl+I Ready)',
+    metaDescription: 'Convert any bank statement PDF into a Tally Prime import file. Vouchers created automatically, one Ctrl+I in Tally Prime 3.x/4.x/5.x — no TDL, no plugin, no manual entry. SBI, HDFC, ICICI & 500+ banks.',
+    keywords: [
+      'bank statement to tally prime', 'import bank statement in tally prime',
+      'tally prime bank statement import', 'bank statement pdf to tally prime',
+      'tally prime import bank statement xml', 'tally prime 4 bank statement',
+      'convert bank statement to tally prime', 'tally prime voucher import from pdf',
+    ],
+    hero: {
+      kicker: 'BANK STATEMENT → TALLY PRIME',
+      h1Prefix: 'Bank statement into',
+      h1Highlight: 'Tally Prime',
+      h1Suffix: ', the fast way.',
+      subhead: 'Purpose-built for Tally Prime. Upload a bank PDF, download a Tally Prime import file, press Ctrl+I — every transaction lands as a Receipt or Payment voucher. No TDL, no add-on, no manual voucher entry. Works with Tally Prime 3.x, 4.x and the latest release.',
+    },
+    benefits: ['One Ctrl+I import', 'No TDL or plugin', 'Tally Prime 3.x / 4.x / 5.x'],
+    steps: [
+      { label: 'Upload your bank PDF',            sub: 'Any Indian bank — SBI, HDFC, ICICI, Axis, Kotak and 90+ more.' },
+      { label: 'Download the Tally Prime XML',     sub: 'BankXL builds a voucher-per-transaction file in Tally Prime\'s import schema.' },
+      { label: 'Gateway of Tally → Ctrl+I → Vouchers', sub: 'Point Tally Prime at the file and confirm. Every voucher lands in seconds.' },
+    ],
+    features: [
+      { title: 'Built for Tally Prime\'s import flow', big: true,
+        desc: 'The XML matches exactly what Tally Prime\'s Import Data (Ctrl+I → Vouchers) expects — no "could not import" errors, no schema mismatches, no manual field mapping. Just open your company, import, and every transaction is a proper voucher.' },
+      { title: 'Receipt & payment vouchers, auto-typed', big: true,
+        desc: 'Credits become Receipt vouchers and debits become Payment vouchers, with the bank ledger set on the correct side. The counterparty imports as Suspense so you can bulk-reclassify inside Tally Prime in a couple of clicks.' },
+      { title: 'No TDL, no add-on',           desc: 'Uses Tally Prime\'s native Import Data. Nothing to install, nothing to license, nothing to maintain.' },
+      { title: 'Reference numbers preserved',  desc: 'UPI refs, UTRs and cheque numbers carry through as voucher narrations for a clean audit trail.' },
+      { title: 'Correct date format',          desc: 'Dates emitted as YYYYMMDD, exactly as Tally Prime expects — zero date-mismatch import failures.' },
+      { title: 'ERP 9 on a legacy client?',    desc: 'The same file also imports into Tally ERP 9 — see the general Tally XML converter for the ERP 9 walkthrough.' },
+    ],
+    personas: [
+      { title: 'Chartered Accountants',        desc: 'Import a full year of bank data into Tally Prime as vouchers in minutes instead of typing them.' },
+      { title: 'CA firms on Tally Prime',       desc: 'Standardise every article on the same one-Ctrl+I workflow across all client companies.' },
+      { title: 'In-house Tally Prime users',    desc: 'Turn month-end bank reconciliation from a day of data entry into under an hour.' },
+      { title: 'Tax consultants',               desc: 'Handle the ITR/GST-season flood of client statements without the manual voucher backlog.' },
+    ],
+    outputColumns: ['Date', 'Voucher Type', 'Amount', 'Bank Ledger', 'Narration (with Ref No)'],
+    outputSample: [
+      { date: '20250401', description: 'NEFT-CR-INFOSYS LTD-SAL APR2025',    debit: '',           credit: '85,000.00',  balance: 'Receipt' },
+      { date: '20250405', description: 'EMI-HDFC HOME LOAN-HOUSING LOAN EMI', debit: '32,500.00',  credit: '',           balance: 'Payment' },
+      { date: '20250407', description: 'NEFT-DR-MAHESH LANDLORD-RENT',       debit: '35,000.00',  credit: '',           balance: 'Payment' },
+      { date: '20250412', description: 'UPI-ZOMATO-zomato@paytm-MUM',         debit: '1,425.05',   credit: '',           balance: 'Payment' },
+      { date: '20250415', description: 'ATM WDL-HDFC0001-ANDHERI',           debit: '5,000.00',   credit: '',           balance: 'Payment' },
+    ],
+    faqs: [
+      { q: 'Does this work with Tally Prime 4.x and the latest release?',
+        a: 'Yes. BankXL emits XML in Tally Prime\'s standard voucher-import schema, which has been stable across Tally Prime 3.x, 4.x and the current release. The Import Data (Ctrl+I) flow is the same in every version.' },
+      { q: 'How do I import the file into Tally Prime?',
+        a: 'Open your company → Gateway of Tally → press Ctrl+I (or Import Data) → choose Vouchers → point Tally Prime to the XML BankXL gave you → confirm. Every transaction imports as a voucher, correctly dated.' },
+      { q: 'Do I need a TDL or any add-on for Tally Prime?',
+        a: 'No. This uses Tally Prime\'s built-in Import Data feature. There is no TDL to load, no plugin to install, and no third-party tool sitting between BankXL and Tally.' },
+      { q: 'What voucher types does BankXL create?',
+        a: 'Money in (credits) become Receipt vouchers; money out (debits) become Payment vouchers. The bank ledger is set automatically and the counterparty side imports as Suspense for fast bulk reclassification.' },
+      { q: 'Which ledgers do I need to create first in Tally Prime?',
+        a: 'Only your bank ledger has to exist before import. Everything else lands against a single Suspense ledger that you can re-tag in bulk inside Tally Prime — far quicker than creating vouchers by hand.' },
+      { q: 'What\'s the difference between this and the general Tally XML converter?',
+        a: 'This page is tuned for Tally Prime specifically. If you still run Tally ERP 9 for some legacy clients, use the general Bank Statement to Tally XML converter, which walks through the ERP 9 import path too — the underlying file is compatible with both.' },
+      { q: 'Is the Tally Prime export free?',
+        a: 'Tally XML export is part of the Pro plan (₹499/month, 800 pages). Free users get Excel. The Pro plan typically pays for itself on the first client statement you don\'t have to type into Tally by hand.' },
     ],
     proOnly: true,
   },
